@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: qinbir-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: qinbir
+      POSTGRES_USER: qinbir_user
+      POSTGRES_PASSWORD: qinbir_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - qinbir_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  qinbir_postgres_data:

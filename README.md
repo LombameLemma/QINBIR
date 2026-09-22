@@ -1,54 +1,66 @@
 # ቅንብር — QINBIR
 
-## Automatic University Course Scheduling System
+## Smart University Course Scheduling System
 
-QINBIR is an automated university course scheduling system designed to
-generate conflict-free and optimized academic timetables.
+QINBIR is a web-based university course scheduling system that automatically
+generates timetables based on courses, lecturers, classrooms, student sections,
+available time slots, and scheduling constraints.
 
-## Problem
+## Project Goal
 
-Creating university course schedules manually is time-consuming and can
-result in conflicts between:
-
-- Courses
-- Lecturers
-- Classrooms
-- Student sections
-- Available time slots
-
-## Solution
-
-QINBIR automatically generates university course timetables based on
-academic requirements, available resources, and scheduling constraints.
-
-## Main Features
-
-- Automatic course scheduling
-- Lecturer availability management
-- Classroom management
-- Student section management
-- Conflict detection
-- Hard and soft scheduling constraints
-- Automatic timetable generation
-- Schedule regeneration
-- Student timetable
-- Lecturer timetable
-- Administrator dashboard
+The goal of QINBIR is to reduce manual timetable creation and minimize
+scheduling conflicts.
 
 ## Technology Stack
 
+<<<<<<< Updated upstream
 - Frontend: React
 - Backend: FastAPI
 - Database: SQLite
 - Scheduling Engine: Python + OR-Tools
 - Authentication: JWT
 - Deployment: Docker
+=======
+### Frontend
+>>>>>>> Stashed changes
 
-## Project Status
+- React
+- Vite
+- Axios
+- React Router
 
-🚧 Currently in development.
+### Backend
 
-## Project Vision
+- Python
+- FastAPI
+- SQLAlchemy
+- SQLite
 
-To transform university timetable creation from a manual process into
-an automated, constraint-aware scheduling system.
+### Scheduling Engine
+
+- Python
+- Google OR-Tools
+
+### Deployment
+
+- Docker
+- Docker Compose
+
+## Database
+
+SQLite is used for local development.
+
+SQLAlchemy provides the database abstraction layer so that QINBIR can
+later migrate to PostgreSQL if needed.
+
+## Project Structure
+
+```text
+QINBIR/
+├── backend/
+├── frontend/
+├── scheduler/
+├── docs/
+├── tests/
+├── docker-compose.yml
+└── README.md
