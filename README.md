@@ -39,7 +39,7 @@ academic requirements, available resources, and scheduling constraints.
 
 - Frontend: React
 - Backend: FastAPI
-- Database: PostgreSQL
+- Database: SQLite
 - Scheduling Engine: Python + OR-Tools
 - Authentication: JWT
 - Deployment: Docker
