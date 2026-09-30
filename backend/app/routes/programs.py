@@ -21,9 +21,7 @@ class ProgramCreate(BaseModel):
 
 @router.get("/")
 def get_programs(db: Session = Depends(get_db)):
-    programs = db.query(Program).all()
-
-    return programs
+    return db.query(Program).all()
 
 
 @router.post("/")
@@ -31,7 +29,6 @@ def create_program(
     program: ProgramCreate,
     db: Session = Depends(get_db)
 ):
-    # Check that the department exists
     department = (
         db.query(Department)
         .filter(Department.id == program.department_id)
@@ -44,7 +41,6 @@ def create_program(
             detail="Department not found"
         )
 
-    # Check for duplicate program code
     existing_program = (
         db.query(Program)
         .filter(Program.code == program.code)
