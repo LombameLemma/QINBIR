@@ -2,20 +2,20 @@
 import { useEffect, useState } from "react";
 import {
   BrowserRouter,
-  NavLink,
-  Route,
   Routes,
-  useNavigate,
+  Route,
+  NavLink,
+  useLocation,
 } from "react-router-dom";
 
-const API_URL = "http://localhost:8000";
+const API_BASE_URL = "http://127.0.0.1:8000";
 
 /* =========================================================
    API HELPER
 ========================================================= */
 
-async function apiRequest(url, options = {}) {
-  const response = await fetch(`${API_URL}${url}`, {
+async function apiRequest(endpoint, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     headers: {
       "Content-Type": "application/json",
       ...(options.headers || {}),
@@ -23,21 +23,16 @@ async function apiRequest(url, options = {}) {
     ...options,
   });
 
-  const text = await response.text();
-
-  let data = null;
-
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = text;
-  }
+  const contentType = response.headers.get("content-type");
+  const data = contentType?.includes("application/json")
+    ? await response.json()
+    : await response.text();
 
   if (!response.ok) {
     const message =
-      data?.detail ||
-      data?.message ||
-      "Request failed.";
+      typeof data === "object" && data?.detail
+        ? data.detail
+        : "Something went wrong.";
 
     throw new Error(message);
   }
@@ -46,11 +41,38 @@ async function apiRequest(url, options = {}) {
 }
 
 /* =========================================================
+   TIME FORMATTER
+   Backend keeps 24-hour time.
+   Frontend displays 12-hour AM/PM time.
+========================================================= */
+
+function formatTime(time) {
+  if (!time) {
+    return "";
+  }
+
+  const cleanTime = String(time).slice(0, 5);
+  const [hourString, minuteString] = cleanTime.split(":");
+
+  const hour = Number(hourString);
+  const minute = Number(minuteString);
+
+  if (Number.isNaN(hour) || Number.isNaN(minute)) {
+    return time;
+  }
+
+  const period = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 || 12;
+
+  return `${displayHour}:${String(minute).padStart(2, "0")} ${period}`;
+}
+
+/* =========================================================
    SIDEBAR
 ========================================================= */
 
 function Sidebar() {
-  const links = [
+  const navItems = [
     { path: "/", label: "Dashboard" },
     { path: "/departments", label: "Departments" },
     { path: "/programs", label: "Programs" },
@@ -68,10 +90,7 @@ function Sidebar() {
       label: "Course Requirements",
     },
     { path: "/constraints", label: "Constraints" },
-    {
-      path: "/generate-schedule",
-      label: "Generate Schedule",
-    },
+    { path: "/generate-schedule", label: "Generate Schedule" },
     { path: "/timetable", label: "Timetable" },
   ];
 
@@ -83,16 +102,15 @@ function Sidebar() {
       </div>
 
       <nav>
-        {links.map((link) => (
+        {navItems.map((item) => (
           <NavLink
-            key={link.path}
-            to={link.path}
-            end={link.path === "/"}
+            key={item.path}
+            to={item.path}
             className={({ isActive }) =>
-              `nav-link ${isActive ? "active" : ""}`
+              isActive ? "nav-link active" : "nav-link"
             }
           >
-            {link.label}
+            {item.label}
           </NavLink>
         ))}
       </nav>
@@ -105,37 +123,28 @@ function Sidebar() {
 ========================================================= */
 
 function TopBar() {
-  const [connected, setConnected] = useState(false);
+  const [apiConnected, setApiConnected] = useState(false);
 
   useEffect(() => {
-    async function checkApi() {
-      try {
-        await apiRequest("/health");
-        setConnected(true);
-      } catch {
-        setConnected(false);
-      }
-    }
-
-    checkApi();
-
-    const interval = setInterval(checkApi, 5000);
-
-    return () => clearInterval(interval);
+    apiRequest("/health")
+      .then(() => setApiConnected(true))
+      .catch(() => setApiConnected(false));
   }, []);
 
   return (
     <header className="topbar">
-      <strong>Automatic University Course Scheduling System</strong>
+      <div>
+        <strong>QINBIR</strong>
+      </div>
 
       <div className="api-status">
         <span
           style={{
-            background: connected ? "#22c55e" : "#ef4444",
+            background: apiConnected ? "#22c55e" : "#ef4444",
           }}
         ></span>
 
-        {connected ? "API Connected" : "API Disconnected"}
+        {apiConnected ? "API Connected" : "API Disconnected"}
       </div>
     </header>
   );
@@ -153,9 +162,7 @@ function Layout({ children }) {
       <div className="content">
         <TopBar />
 
-        <main className="page-content">
-          {children}
-        </main>
+        <main className="page-content">{children}</main>
       </div>
     </div>
   );
@@ -166,74 +173,55 @@ function Layout({ children }) {
 ========================================================= */
 
 function Dashboard() {
-  const cards = [
-    {
-      title: "Departments",
-      description: "Manage university departments.",
-      path: "/departments",
-    },
-    {
-      title: "Programs",
-      description: "Manage academic programs.",
-      path: "/programs",
-    },
-    {
-      title: "Courses",
-      description: "Manage university courses.",
-      path: "/courses",
-    },
-    {
-      title: "Lecturers",
-      description: "Manage lecturers and instructors.",
-      path: "/lecturers",
-    },
-    {
-      title: "Student Sections",
-      description: "Manage student groups and sections.",
-      path: "/student-sections",
-    },
-    {
-      title: "Rooms",
-      description: "Manage classrooms and capacities.",
-      path: "/rooms",
-    },
-    {
-      title: "Time Slots",
-      description: "Manage available teaching periods.",
-      path: "/time-slots",
-    },
-    {
-      title: "Course Requirements",
-      description: "Define teaching requirements.",
-      path: "/course-requirements",
-    },
-  ];
-
   return (
     <div>
       <h1>Dashboard</h1>
 
       <p>
-        Welcome to QINBIR, the automatic university course
-        scheduling system.
+        Welcome to QINBIR, the automatic university course scheduling
+        system.
       </p>
 
       <div className="dashboard-grid">
-        {cards.map((card) => (
-          <a
-            key={card.path}
-            href={card.path}
-            style={{
-              textDecoration: "none",
-              color: "inherit",
-            }}
-          >
-            <div className="dashboard-card">
-              <h3>{card.title}</h3>
-              <p>{card.description}</p>
-            </div>
-          </a>
-        ))}
+        <div className="dashboard-card">
+          <h3>Departments</h3>
+          <p>Manage university departments.</p>
+        </div>
+
+        <div className="dashboard-card">
+          <h3>Programs</h3>
+          <p>Manage academic programs.</p>
+        </div>
+
+        <div className="dashboard-card">
+          <h3>Courses</h3>
+          <p>Manage university courses.</p>
+        </div>
+
+        <div className="dashboard-card">
+          <h3>Lecturers</h3>
+          <p>Manage lecturers and instructors.</p>
+        </div>
+
+        <div className="dashboard-card">
+          <h3>Student Sections</h3>
+          <p>Manage student groups and sections.</p>
+        </div>
+
+        <div className="dashboard-card">
+          <h3>Rooms</h3>
+          <p>Manage classrooms and capacities.</p>
+        </div>
+
+        <div className="dashboard-card">
+          <h3>Time Slots</h3>
+          <p>Manage available university time slots.</p>
+        </div>
+
+        <div className="dashboard-card">
+          <h3>Timetable</h3>
+          <p>View automatically generated schedules.</p>
+        </div>
       </div>
     </div>
   );
@@ -248,7 +236,6 @@ function Departments() {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
 
   async function loadDepartments() {
     try {
@@ -263,15 +250,8 @@ function Departments() {
     loadDepartments();
   }, []);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-
-    if (!name.trim() || !code.trim()) {
-      setMessage("Please fill in all fields.");
-      return;
-    }
-
-    setLoading(true);
+  async function handleSubmit(event) {
+    event.preventDefault();
     setMessage("");
 
     try {
@@ -285,13 +265,10 @@ function Departments() {
 
       setName("");
       setCode("");
-      setMessage("Department added successfully.");
-
-      await loadDepartments();
+      setMessage("Department created successfully.");
+      loadDepartments();
     } catch (error) {
       setMessage(error.message);
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -306,42 +283,39 @@ function Departments() {
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
             <div className="form-group">
-              <label>Department Name</label>
+              <label>Name</label>
 
               <input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(event) => setName(event.target.value)}
                 placeholder="Computer Science"
+                required
               />
             </div>
 
             <div className="form-group">
-              <label>Department Code</label>
+              <label>Code</label>
 
               <input
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
+                onChange={(event) => setCode(event.target.value)}
                 placeholder="CS"
+                required
               />
             </div>
           </div>
 
-          <button
-            className="primary-button"
-            disabled={loading}
-          >
-            {loading ? "Adding..." : "Add Department"}
+          <button className="primary-button" type="submit">
+            Add Department
           </button>
         </form>
 
-        {message && (
-          <p className="form-message">{message}</p>
-        )}
+        {message && <p className="form-message">{message}</p>}
       </div>
 
       <div className="table-card">
         <div className="table-header">
-          <h2>Departments</h2>
+          <h2>Department List</h2>
 
           <button
             className="secondary-button"
@@ -351,25 +325,29 @@ function Departments() {
           </button>
         </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Code</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {departments.map((department) => (
-              <tr key={department.id}>
-                <td>{department.id}</td>
-                <td>{department.name}</td>
-                <td>{department.code}</td>
+        {departments.length === 0 ? (
+          <p className="empty-message">No departments found.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Code</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {departments.map((department) => (
+                <tr key={department.id}>
+                  <td>{department.id}</td>
+                  <td>{department.name}</td>
+                  <td>{department.code}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
@@ -388,15 +366,13 @@ function Programs() {
   const [departmentId, setDepartmentId] = useState("");
 
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
 
   async function loadData() {
     try {
-      const [programData, departmentData] =
-        await Promise.all([
-          apiRequest("/programs/"),
-          apiRequest("/departments/"),
-        ]);
+      const [programData, departmentData] = await Promise.all([
+        apiRequest("/programs/"),
+        apiRequest("/departments/"),
+      ]);
 
       setPrograms(programData);
       setDepartments(departmentData);
@@ -409,15 +385,8 @@ function Programs() {
     loadData();
   }, []);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-
-    if (!name.trim() || !code.trim() || !departmentId) {
-      setMessage("Please fill in all fields.");
-      return;
-    }
-
-    setLoading(true);
+  async function handleSubmit(event) {
+    event.preventDefault();
     setMessage("");
 
     try {
@@ -433,25 +402,22 @@ function Programs() {
       setName("");
       setCode("");
       setDepartmentId("");
+      setMessage("Program created successfully.");
 
-      setMessage("Program added successfully.");
-
-      await loadData();
+      loadData();
     } catch (error) {
       setMessage(error.message);
-    } finally {
-      setLoading(false);
     }
   }
 
-  function departmentName(id) {
+  function getDepartmentName(id) {
     const department = departments.find(
       (item) => item.id === id
     );
 
     return department
       ? `${department.name} (${department.code})`
-      : id;
+      : `Department ${id}`;
   }
 
   return (
@@ -465,22 +431,24 @@ function Programs() {
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
             <div className="form-group">
-              <label>Program Name</label>
+              <label>Name</label>
 
               <input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(event) => setName(event.target.value)}
                 placeholder="Software Engineering"
+                required
               />
             </div>
 
             <div className="form-group">
-              <label>Program Code</label>
+              <label>Code</label>
 
               <input
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
+                onChange={(event) => setCode(event.target.value)}
                 placeholder="SE"
+                required
               />
             </div>
 
@@ -489,13 +457,12 @@ function Programs() {
 
               <select
                 value={departmentId}
-                onChange={(e) =>
-                  setDepartmentId(e.target.value)
+                onChange={(event) =>
+                  setDepartmentId(event.target.value)
                 }
+                required
               >
-                <option value="">
-                  Select Department
-                </option>
+                <option value="">Select Department</option>
 
                 {departments.map((department) => (
                   <option
@@ -509,22 +476,17 @@ function Programs() {
             </div>
           </div>
 
-          <button
-            className="primary-button"
-            disabled={loading}
-          >
-            {loading ? "Adding..." : "Add Program"}
+          <button className="primary-button" type="submit">
+            Add Program
           </button>
         </form>
 
-        {message && (
-          <p className="form-message">{message}</p>
-        )}
+        {message && <p className="form-message">{message}</p>}
       </div>
 
       <div className="table-card">
         <div className="table-header">
-          <h2>Programs</h2>
+          <h2>Program List</h2>
 
           <button
             className="secondary-button"
@@ -534,29 +496,33 @@ function Programs() {
           </button>
         </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Code</th>
-              <th>Department</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {programs.map((program) => (
-              <tr key={program.id}>
-                <td>{program.id}</td>
-                <td>{program.name}</td>
-                <td>{program.code}</td>
-                <td>
-                  {departmentName(program.department_id)}
-                </td>
+        {programs.length === 0 ? (
+          <p className="empty-message">No programs found.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Code</th>
+                <th>Department</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {programs.map((program) => (
+                <tr key={program.id}>
+                  <td>{program.id}</td>
+                  <td>{program.name}</td>
+                  <td>{program.code}</td>
+                  <td>
+                    {getDepartmentName(program.department_id)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
@@ -576,15 +542,13 @@ function Courses() {
   const [programId, setProgramId] = useState("");
 
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
 
   async function loadData() {
     try {
-      const [courseData, programData] =
-        await Promise.all([
-          apiRequest("/courses/"),
-          apiRequest("/programs/"),
-        ]);
+      const [courseData, programData] = await Promise.all([
+        apiRequest("/courses/"),
+        apiRequest("/programs/"),
+      ]);
 
       setCourses(courseData);
       setPrograms(programData);
@@ -597,20 +561,8 @@ function Courses() {
     loadData();
   }, []);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-
-    if (
-      !code.trim() ||
-      !name.trim() ||
-      !creditHours ||
-      !programId
-    ) {
-      setMessage("Please fill in all fields.");
-      return;
-    }
-
-    setLoading(true);
+  async function handleSubmit(event) {
+    event.preventDefault();
     setMessage("");
 
     try {
@@ -629,24 +581,20 @@ function Courses() {
       setCreditHours("");
       setProgramId("");
 
-      setMessage("Course added successfully.");
+      setMessage("Course created successfully.");
 
-      await loadData();
+      loadData();
     } catch (error) {
       setMessage(error.message);
-    } finally {
-      setLoading(false);
     }
   }
 
-  function programName(id) {
-    const program = programs.find(
-      (item) => item.id === id
-    );
+  function getProgramName(id) {
+    const program = programs.find((item) => item.id === id);
 
     return program
       ? `${program.name} (${program.code})`
-      : id;
+      : `Program ${id}`;
   }
 
   return (
@@ -664,8 +612,9 @@ function Courses() {
 
               <input
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
+                onChange={(event) => setCode(event.target.value)}
                 placeholder="SE201"
+                required
               />
             </div>
 
@@ -674,8 +623,9 @@ function Courses() {
 
               <input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(event) => setName(event.target.value)}
                 placeholder="Database Systems"
+                required
               />
             </div>
 
@@ -686,9 +636,11 @@ function Courses() {
                 type="number"
                 min="1"
                 value={creditHours}
-                onChange={(e) =>
-                  setCreditHours(e.target.value)
+                onChange={(event) =>
+                  setCreditHours(event.target.value)
                 }
+                placeholder="3"
+                required
               />
             </div>
 
@@ -697,19 +649,15 @@ function Courses() {
 
               <select
                 value={programId}
-                onChange={(e) =>
-                  setProgramId(e.target.value)
+                onChange={(event) =>
+                  setProgramId(event.target.value)
                 }
+                required
               >
-                <option value="">
-                  Select Program
-                </option>
+                <option value="">Select Program</option>
 
                 {programs.map((program) => (
-                  <option
-                    key={program.id}
-                    value={program.id}
-                  >
+                  <option key={program.id} value={program.id}>
                     {program.name} ({program.code})
                   </option>
                 ))}
@@ -717,22 +665,17 @@ function Courses() {
             </div>
           </div>
 
-          <button
-            className="primary-button"
-            disabled={loading}
-          >
-            {loading ? "Adding..." : "Add Course"}
+          <button className="primary-button" type="submit">
+            Add Course
           </button>
         </form>
 
-        {message && (
-          <p className="form-message">{message}</p>
-        )}
+        {message && <p className="form-message">{message}</p>}
       </div>
 
       <div className="table-card">
         <div className="table-header">
-          <h2>Courses</h2>
+          <h2>Course List</h2>
 
           <button
             className="secondary-button"
@@ -742,31 +685,33 @@ function Courses() {
           </button>
         </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Code</th>
-              <th>Name</th>
-              <th>Credits</th>
-              <th>Program</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {courses.map((course) => (
-              <tr key={course.id}>
-                <td>{course.id}</td>
-                <td>{course.code}</td>
-                <td>{course.name}</td>
-                <td>{course.credit_hours}</td>
-                <td>
-                  {programName(course.program_id)}
-                </td>
+        {courses.length === 0 ? (
+          <p className="empty-message">No courses found.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Credits</th>
+                <th>Program</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {courses.map((course) => (
+                <tr key={course.id}>
+                  <td>{course.id}</td>
+                  <td>{course.code}</td>
+                  <td>{course.name}</td>
+                  <td>{course.credit_hours}</td>
+                  <td>{getProgramName(course.program_id)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
@@ -787,19 +732,15 @@ function Lecturers() {
   const [name, setName] = useState("");
 
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
 
   async function loadData() {
     try {
-      const [
-        lecturerData,
-        userData,
-        departmentData,
-      ] = await Promise.all([
-        apiRequest("/lecturers/"),
-        apiRequest("/users/"),
-        apiRequest("/departments/"),
-      ]);
+      const [lecturerData, userData, departmentData] =
+        await Promise.all([
+          apiRequest("/lecturers/"),
+          apiRequest("/users/"),
+          apiRequest("/departments/"),
+        ]);
 
       setLecturers(lecturerData);
       setUsers(userData);
@@ -813,20 +754,8 @@ function Lecturers() {
     loadData();
   }, []);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-
-    if (
-      !userId ||
-      !departmentId ||
-      !employeeId.trim() ||
-      !name.trim()
-    ) {
-      setMessage("Please fill in all fields.");
-      return;
-    }
-
-    setLoading(true);
+  async function handleSubmit(event) {
+    event.preventDefault();
     setMessage("");
 
     try {
@@ -845,30 +774,28 @@ function Lecturers() {
       setEmployeeId("");
       setName("");
 
-      setMessage("Lecturer added successfully.");
+      setMessage("Lecturer created successfully.");
 
-      await loadData();
+      loadData();
     } catch (error) {
       setMessage(error.message);
-    } finally {
-      setLoading(false);
     }
   }
 
-  function departmentName(id) {
+  function getDepartmentName(id) {
     const department = departments.find(
       (item) => item.id === id
     );
 
     return department
       ? `${department.name} (${department.code})`
-      : id;
+      : `Department ${id}`;
   }
 
   return (
     <div>
       <h1>Lecturers</h1>
-      <p>Manage lecturers and instructors.</p>
+      <p>Manage university lecturers.</p>
 
       <div className="form-card">
         <h2>Add Lecturer</h2>
@@ -880,15 +807,16 @@ function Lecturers() {
 
               <select
                 value={userId}
-                onChange={(e) =>
-                  setUserId(e.target.value)
+                onChange={(event) =>
+                  setUserId(event.target.value)
                 }
+                required
               >
                 <option value="">Select User</option>
 
                 {users.map((user) => (
                   <option key={user.id} value={user.id}>
-                    {user.full_name} — {user.email}
+                    {user.full_name} - {user.email}
                   </option>
                 ))}
               </select>
@@ -899,13 +827,12 @@ function Lecturers() {
 
               <select
                 value={departmentId}
-                onChange={(e) =>
-                  setDepartmentId(e.target.value)
+                onChange={(event) =>
+                  setDepartmentId(event.target.value)
                 }
+                required
               >
-                <option value="">
-                  Select Department
-                </option>
+                <option value="">Select Department</option>
 
                 {departments.map((department) => (
                   <option
@@ -923,10 +850,11 @@ function Lecturers() {
 
               <input
                 value={employeeId}
-                onChange={(e) =>
-                  setEmployeeId(e.target.value)
+                onChange={(event) =>
+                  setEmployeeId(event.target.value)
                 }
                 placeholder="LEC003"
+                required
               />
             </div>
 
@@ -935,28 +863,24 @@ function Lecturers() {
 
               <input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Dr. Example"
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Dr. Name"
+                required
               />
             </div>
           </div>
 
-          <button
-            className="primary-button"
-            disabled={loading}
-          >
-            {loading ? "Adding..." : "Add Lecturer"}
+          <button className="primary-button" type="submit">
+            Add Lecturer
           </button>
         </form>
 
-        {message && (
-          <p className="form-message">{message}</p>
-        )}
+        {message && <p className="form-message">{message}</p>}
       </div>
 
       <div className="table-card">
         <div className="table-header">
-          <h2>Lecturers</h2>
+          <h2>Lecturer List</h2>
 
           <button
             className="secondary-button"
@@ -966,33 +890,35 @@ function Lecturers() {
           </button>
         </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Employee ID</th>
-              <th>Name</th>
-              <th>User ID</th>
-              <th>Department</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {lecturers.map((lecturer) => (
-              <tr key={lecturer.id}>
-                <td>{lecturer.id}</td>
-                <td>{lecturer.employee_id}</td>
-                <td>{lecturer.name}</td>
-                <td>{lecturer.user_id}</td>
-                <td>
-                  {departmentName(
-                    lecturer.department_id
-                  )}
-                </td>
+        {lecturers.length === 0 ? (
+          <p className="empty-message">No lecturers found.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Employee ID</th>
+                <th>Name</th>
+                <th>Department</th>
+                <th>User ID</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {lecturers.map((lecturer) => (
+                <tr key={lecturer.id}>
+                  <td>{lecturer.id}</td>
+                  <td>{lecturer.employee_id}</td>
+                  <td>{lecturer.name}</td>
+                  <td>
+                    {getDepartmentName(lecturer.department_id)}
+                  </td>
+                  <td>{lecturer.user_id}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
@@ -1013,15 +939,13 @@ function StudentSections() {
   const [studentCount, setStudentCount] = useState("");
 
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
 
   async function loadData() {
     try {
-      const [sectionData, programData] =
-        await Promise.all([
-          apiRequest("/student-sections/"),
-          apiRequest("/programs/"),
-        ]);
+      const [sectionData, programData] = await Promise.all([
+        apiRequest("/student-sections/"),
+        apiRequest("/programs/"),
+      ]);
 
       setSections(sectionData);
       setPrograms(programData);
@@ -1034,32 +958,8 @@ function StudentSections() {
     loadData();
   }, []);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-
-    if (
-      !name.trim() ||
-      !programId ||
-      !year ||
-      !semester ||
-      !studentCount
-    ) {
-      setMessage("Please fill in all fields.");
-      return;
-    }
-
-    if (
-      Number(year) < 1 ||
-      Number(semester) < 1 ||
-      Number(studentCount) < 1
-    ) {
-      setMessage(
-        "Year, semester, and student count must be at least 1."
-      );
-      return;
-    }
-
-    setLoading(true);
+  async function handleSubmit(event) {
+    event.preventDefault();
     setMessage("");
 
     try {
@@ -1080,36 +980,26 @@ function StudentSections() {
       setSemester("");
       setStudentCount("");
 
-      setMessage(
-        "Student section added successfully."
-      );
+      setMessage("Student section created successfully.");
 
-      await loadData();
+      loadData();
     } catch (error) {
       setMessage(error.message);
-    } finally {
-      setLoading(false);
     }
   }
 
-  function programName(id) {
-    const program = programs.find(
-      (item) => item.id === id
-    );
+  function getProgramName(id) {
+    const program = programs.find((item) => item.id === id);
 
     return program
       ? `${program.name} (${program.code})`
-      : id;
+      : `Program ${id}`;
   }
 
   return (
     <div>
       <h1>Student Sections</h1>
-
-      <p>
-        Manage student groups, academic years,
-        semesters, and section sizes.
-      </p>
+      <p>Manage student sections.</p>
 
       <div className="form-card">
         <h2>Add Student Section</h2>
@@ -1121,8 +1011,9 @@ function StudentSections() {
 
               <input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="SE Year 2 Section A"
+                onChange={(event) => setName(event.target.value)}
+                placeholder="SE Year 2 Section C"
+                required
               />
             </div>
 
@@ -1131,19 +1022,15 @@ function StudentSections() {
 
               <select
                 value={programId}
-                onChange={(e) =>
-                  setProgramId(e.target.value)
+                onChange={(event) =>
+                  setProgramId(event.target.value)
                 }
+                required
               >
-                <option value="">
-                  Select Program
-                </option>
+                <option value="">Select Program</option>
 
                 {programs.map((program) => (
-                  <option
-                    key={program.id}
-                    value={program.id}
-                  >
+                  <option key={program.id} value={program.id}>
                     {program.name} ({program.code})
                   </option>
                 ))}
@@ -1157,7 +1044,9 @@ function StudentSections() {
                 type="number"
                 min="1"
                 value={year}
-                onChange={(e) => setYear(e.target.value)}
+                onChange={(event) => setYear(event.target.value)}
+                placeholder="2"
+                required
               />
             </div>
 
@@ -1168,9 +1057,11 @@ function StudentSections() {
                 type="number"
                 min="1"
                 value={semester}
-                onChange={(e) =>
-                  setSemester(e.target.value)
+                onChange={(event) =>
+                  setSemester(event.target.value)
                 }
+                placeholder="1"
+                required
               />
             </div>
 
@@ -1181,31 +1072,26 @@ function StudentSections() {
                 type="number"
                 min="1"
                 value={studentCount}
-                onChange={(e) =>
-                  setStudentCount(e.target.value)
+                onChange={(event) =>
+                  setStudentCount(event.target.value)
                 }
+                placeholder="40"
+                required
               />
             </div>
           </div>
 
-          <button
-            className="primary-button"
-            disabled={loading}
-          >
-            {loading
-              ? "Adding..."
-              : "Add Student Section"}
+          <button className="primary-button" type="submit">
+            Add Section
           </button>
         </form>
 
-        {message && (
-          <p className="form-message">{message}</p>
-        )}
+        {message && <p className="form-message">{message}</p>}
       </div>
 
       <div className="table-card">
         <div className="table-header">
-          <h2>Student Sections</h2>
+          <h2>Student Section List</h2>
 
           <button
             className="secondary-button"
@@ -1215,33 +1101,37 @@ function StudentSections() {
           </button>
         </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Section Name</th>
-              <th>Program</th>
-              <th>Year</th>
-              <th>Semester</th>
-              <th>Student Count</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {sections.map((section) => (
-              <tr key={section.id}>
-                <td>{section.id}</td>
-                <td>{section.name}</td>
-                <td>
-                  {programName(section.program_id)}
-                </td>
-                <td>{section.year}</td>
-                <td>{section.semester}</td>
-                <td>{section.student_count}</td>
+        {sections.length === 0 ? (
+          <p className="empty-message">
+            No student sections found.
+          </p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Section</th>
+                <th>Program</th>
+                <th>Year</th>
+                <th>Semester</th>
+                <th>Students</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {sections.map((section) => (
+                <tr key={section.id}>
+                  <td>{section.id}</td>
+                  <td>{section.name}</td>
+                  <td>{getProgramName(section.program_id)}</td>
+                  <td>{section.year}</td>
+                  <td>{section.semester}</td>
+                  <td>{section.student_count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
@@ -1260,7 +1150,6 @@ function Rooms() {
   const [roomType, setRoomType] = useState("");
 
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
 
   async function loadRooms() {
     try {
@@ -1275,20 +1164,8 @@ function Rooms() {
     loadRooms();
   }, []);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-
-    if (
-      !name.trim() ||
-      !building.trim() ||
-      !capacity ||
-      !roomType.trim()
-    ) {
-      setMessage("Please fill in all fields.");
-      return;
-    }
-
-    setLoading(true);
+  async function handleSubmit(event) {
+    event.preventDefault();
     setMessage("");
 
     try {
@@ -1307,20 +1184,18 @@ function Rooms() {
       setCapacity("");
       setRoomType("");
 
-      setMessage("Room added successfully.");
+      setMessage("Room created successfully.");
 
-      await loadRooms();
+      loadRooms();
     } catch (error) {
       setMessage(error.message);
-    } finally {
-      setLoading(false);
     }
   }
 
   return (
     <div>
       <h1>Rooms</h1>
-      <p>Manage classrooms, buildings, and room capacities.</p>
+      <p>Manage classrooms and rooms.</p>
 
       <div className="form-card">
         <h2>Add Room</h2>
@@ -1332,8 +1207,9 @@ function Rooms() {
 
               <input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(event) => setName(event.target.value)}
                 placeholder="Room 203"
+                required
               />
             </div>
 
@@ -1342,10 +1218,11 @@ function Rooms() {
 
               <input
                 value={building}
-                onChange={(e) =>
-                  setBuilding(e.target.value)
+                onChange={(event) =>
+                  setBuilding(event.target.value)
                 }
                 placeholder="Main Building"
+                required
               />
             </div>
 
@@ -1356,10 +1233,11 @@ function Rooms() {
                 type="number"
                 min="1"
                 value={capacity}
-                onChange={(e) =>
-                  setCapacity(e.target.value)
+                onChange={(event) =>
+                  setCapacity(event.target.value)
                 }
                 placeholder="60"
+                required
               />
             </div>
 
@@ -1368,30 +1246,26 @@ function Rooms() {
 
               <input
                 value={roomType}
-                onChange={(e) =>
-                  setRoomType(e.target.value)
+                onChange={(event) =>
+                  setRoomType(event.target.value)
                 }
                 placeholder="Classroom"
+                required
               />
             </div>
           </div>
 
-          <button
-            className="primary-button"
-            disabled={loading}
-          >
-            {loading ? "Adding..." : "Add Room"}
+          <button className="primary-button" type="submit">
+            Add Room
           </button>
         </form>
 
-        {message && (
-          <p className="form-message">{message}</p>
-        )}
+        {message && <p className="form-message">{message}</p>}
       </div>
 
       <div className="table-card">
         <div className="table-header">
-          <h2>Rooms</h2>
+          <h2>Room List</h2>
 
           <button
             className="secondary-button"
@@ -1401,29 +1275,33 @@ function Rooms() {
           </button>
         </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Building</th>
-              <th>Capacity</th>
-              <th>Room Type</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {rooms.map((room) => (
-              <tr key={room.id}>
-                <td>{room.id}</td>
-                <td>{room.name}</td>
-                <td>{room.building}</td>
-                <td>{room.capacity}</td>
-                <td>{room.room_type}</td>
+        {rooms.length === 0 ? (
+          <p className="empty-message">No rooms found.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Building</th>
+                <th>Capacity</th>
+                <th>Type</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {rooms.map((room) => (
+                <tr key={room.id}>
+                  <td>{room.id}</td>
+                  <td>{room.name}</td>
+                  <td>{room.building}</td>
+                  <td>{room.capacity}</td>
+                  <td>{room.room_type}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
@@ -1441,7 +1319,6 @@ function TimeSlots() {
   const [endTime, setEndTime] = useState("");
 
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
 
   async function loadTimeSlots() {
     try {
@@ -1456,15 +1333,8 @@ function TimeSlots() {
     loadTimeSlots();
   }, []);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-
-    if (!day || !startTime || !endTime) {
-      setMessage("Please fill in all fields.");
-      return;
-    }
-
-    setLoading(true);
+  async function handleSubmit(event) {
+    event.preventDefault();
     setMessage("");
 
     try {
@@ -1480,20 +1350,18 @@ function TimeSlots() {
       setStartTime("");
       setEndTime("");
 
-      setMessage("Time slot added successfully.");
+      setMessage("Time slot created successfully.");
 
-      await loadTimeSlots();
+      loadTimeSlots();
     } catch (error) {
       setMessage(error.message);
-    } finally {
-      setLoading(false);
     }
   }
 
   return (
     <div>
       <h1>Time Slots</h1>
-      <p>Manage available university teaching periods.</p>
+      <p>Manage university scheduling time slots.</p>
 
       <div className="form-card">
         <h2>Add Time Slot</h2>
@@ -1505,7 +1373,7 @@ function TimeSlots() {
 
               <select
                 value={day}
-                onChange={(e) => setDay(e.target.value)}
+                onChange={(event) => setDay(event.target.value)}
               >
                 <option>Monday</option>
                 <option>Tuesday</option>
@@ -1523,9 +1391,10 @@ function TimeSlots() {
               <input
                 type="time"
                 value={startTime}
-                onChange={(e) =>
-                  setStartTime(e.target.value)
+                onChange={(event) =>
+                  setStartTime(event.target.value)
                 }
+                required
               />
             </div>
 
@@ -1535,29 +1404,25 @@ function TimeSlots() {
               <input
                 type="time"
                 value={endTime}
-                onChange={(e) =>
-                  setEndTime(e.target.value)
+                onChange={(event) =>
+                  setEndTime(event.target.value)
                 }
+                required
               />
             </div>
           </div>
 
-          <button
-            className="primary-button"
-            disabled={loading}
-          >
-            {loading ? "Adding..." : "Add Time Slot"}
+          <button className="primary-button" type="submit">
+            Add Time Slot
           </button>
         </form>
 
-        {message && (
-          <p className="form-message">{message}</p>
-        )}
+        {message && <p className="form-message">{message}</p>}
       </div>
 
       <div className="table-card">
         <div className="table-header">
-          <h2>Time Slots</h2>
+          <h2>Time Slot List</h2>
 
           <button
             className="secondary-button"
@@ -1567,27 +1432,33 @@ function TimeSlots() {
           </button>
         </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Day</th>
-              <th>Start</th>
-              <th>End</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {timeSlots.map((slot) => (
-              <tr key={slot.id}>
-                <td>{slot.id}</td>
-                <td>{slot.day}</td>
-                <td>{String(slot.start_time).slice(0, 5)}</td>
-                <td>{String(slot.end_time).slice(0, 5)}</td>
+        {timeSlots.length === 0 ? (
+          <p className="empty-message">No time slots found.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Day</th>
+                <th>Start Time</th>
+                <th>End Time</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {timeSlots.map((slot) => (
+                <tr key={slot.id}>
+                  <td>{slot.id}</td>
+                  <td>{slot.day}</td>
+
+                  <td>{formatTime(slot.start_time)}</td>
+
+                  <td>{formatTime(slot.end_time)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
@@ -1598,7 +1469,7 @@ function TimeSlots() {
 ========================================================= */
 
 function LecturerAvailability() {
-  const [records, setRecords] = useState([]);
+  const [availability, setAvailability] = useState([]);
   const [lecturers, setLecturers] = useState([]);
   const [timeSlots, setTimeSlots] = useState([]);
 
@@ -1607,7 +1478,6 @@ function LecturerAvailability() {
   const [isAvailable, setIsAvailable] = useState(true);
 
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
 
   async function loadData() {
     try {
@@ -1621,7 +1491,7 @@ function LecturerAvailability() {
         apiRequest("/time-slots/"),
       ]);
 
-      setRecords(availabilityData);
+      setAvailability(availabilityData);
       setLecturers(lecturerData);
       setTimeSlots(timeSlotData);
     } catch (error) {
@@ -1633,15 +1503,8 @@ function LecturerAvailability() {
     loadData();
   }, []);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-
-    if (!lecturerId || !timeSlotId) {
-      setMessage("Please select lecturer and time slot.");
-      return;
-    }
-
-    setLoading(true);
+  async function handleSubmit(event) {
+    event.preventDefault();
     setMessage("");
 
     try {
@@ -1658,48 +1521,38 @@ function LecturerAvailability() {
       setTimeSlotId("");
       setIsAvailable(true);
 
-      setMessage(
-        "Lecturer availability saved successfully."
-      );
+      setMessage("Lecturer availability saved successfully.");
 
-      await loadData();
+      loadData();
     } catch (error) {
       setMessage(error.message);
-    } finally {
-      setLoading(false);
     }
   }
 
-  function lecturerName(id) {
+  function getLecturerName(id) {
     const lecturer = lecturers.find(
       (item) => item.id === id
     );
 
     return lecturer
       ? lecturer.name
-      : id;
+      : `Lecturer ${id}`;
   }
 
-  function timeSlotName(id) {
-    const slot = timeSlots.find(
-      (item) => item.id === id
-    );
+  function getTimeSlot(id) {
+    const slot = timeSlots.find((item) => item.id === id);
 
     return slot
-      ? `${slot.day} ${String(slot.start_time).slice(
-          0,
-          5
-        )}-${String(slot.end_time).slice(0, 5)}`
-      : id;
+      ? `${slot.day} ${formatTime(slot.start_time)} - ${formatTime(
+          slot.end_time
+        )}`
+      : `Time Slot ${id}`;
   }
 
   return (
     <div>
       <h1>Lecturer Availability</h1>
-
-      <p>
-        Define when lecturers are available for teaching.
-      </p>
+      <p>Manage lecturer availability.</p>
 
       <div className="form-card">
         <h2>Add Availability</h2>
@@ -1711,13 +1564,12 @@ function LecturerAvailability() {
 
               <select
                 value={lecturerId}
-                onChange={(e) =>
-                  setLecturerId(e.target.value)
+                onChange={(event) =>
+                  setLecturerId(event.target.value)
                 }
+                required
               >
-                <option value="">
-                  Select Lecturer
-                </option>
+                <option value="">Select Lecturer</option>
 
                 {lecturers.map((lecturer) => (
                   <option
@@ -1735,23 +1587,17 @@ function LecturerAvailability() {
 
               <select
                 value={timeSlotId}
-                onChange={(e) =>
-                  setTimeSlotId(e.target.value)
+                onChange={(event) =>
+                  setTimeSlotId(event.target.value)
                 }
+                required
               >
-                <option value="">
-                  Select Time Slot
-                </option>
+                <option value="">Select Time Slot</option>
 
                 {timeSlots.map((slot) => (
-                  <option
-                    key={slot.id}
-                    value={slot.id}
-                  >
-                    {slot.day}{" "}
-                    {String(slot.start_time).slice(0, 5)}
-                    -
-                    {String(slot.end_time).slice(0, 5)}
+                  <option key={slot.id} value={slot.id}>
+                    {slot.day} {formatTime(slot.start_time)} -{" "}
+                    {formatTime(slot.end_time)}
                   </option>
                 ))}
               </select>
@@ -1762,9 +1608,9 @@ function LecturerAvailability() {
 
               <select
                 value={isAvailable ? "true" : "false"}
-                onChange={(e) =>
+                onChange={(event) =>
                   setIsAvailable(
-                    e.target.value === "true"
+                    event.target.value === "true"
                   )
                 }
               >
@@ -1774,22 +1620,17 @@ function LecturerAvailability() {
             </div>
           </div>
 
-          <button
-            className="primary-button"
-            disabled={loading}
-          >
-            {loading ? "Saving..." : "Save Availability"}
+          <button className="primary-button" type="submit">
+            Save Availability
           </button>
         </form>
 
-        {message && (
-          <p className="form-message">{message}</p>
-        )}
+        {message && <p className="form-message">{message}</p>}
       </div>
 
       <div className="table-card">
         <div className="table-header">
-          <h2>Availability Records</h2>
+          <h2>Availability List</h2>
 
           <button
             className="secondary-button"
@@ -1799,35 +1640,44 @@ function LecturerAvailability() {
           </button>
         </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Lecturer</th>
-              <th>Time Slot</th>
-              <th>Availability</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {records.map((record) => (
-              <tr key={record.id}>
-                <td>{record.id}</td>
-                <td>
-                  {lecturerName(record.lecturer_id)}
-                </td>
-                <td>
-                  {timeSlotName(record.time_slot_id)}
-                </td>
-                <td>
-                  {record.is_available
-                    ? "Available"
-                    : "Unavailable"}
-                </td>
+        {availability.length === 0 ? (
+          <p className="empty-message">
+            No availability records found.
+          </p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Lecturer</th>
+                <th>Time Slot</th>
+                <th>Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {availability.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.id}</td>
+
+                  <td>
+                    {getLecturerName(item.lecturer_id)}
+                  </td>
+
+                  <td>
+                    {getTimeSlot(item.time_slot_id)}
+                  </td>
+
+                  <td>
+                    {item.is_available
+                      ? "Available"
+                      : "Unavailable"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
@@ -1844,18 +1694,13 @@ function CourseRequirements() {
   const [lecturers, setLecturers] = useState([]);
 
   const [courseId, setCourseId] = useState("");
-  const [studentSectionId, setStudentSectionId] =
-    useState("");
+  const [studentSectionId, setStudentSectionId] = useState("");
   const [lecturerId, setLecturerId] = useState("");
-  const [sessionsPerWeek, setSessionsPerWeek] =
-    useState("2");
-  const [longSessionHours, setLongSessionHours] =
-    useState("2");
-  const [shortSessionHours, setShortSessionHours] =
-    useState("1");
+  const [sessionsPerWeek, setSessionsPerWeek] = useState("2");
+  const [longSessionHours, setLongSessionHours] = useState("2");
+  const [shortSessionHours, setShortSessionHours] = useState("1");
 
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
 
   async function loadData() {
     try {
@@ -1884,22 +1729,8 @@ function CourseRequirements() {
     loadData();
   }, []);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-
-    if (
-      !courseId ||
-      !studentSectionId ||
-      !lecturerId ||
-      !sessionsPerWeek ||
-      !longSessionHours ||
-      !shortSessionHours
-    ) {
-      setMessage("Please fill in all fields.");
-      return;
-    }
-
-    setLoading(true);
+  async function handleSubmit(event) {
+    event.preventDefault();
     setMessage("");
 
     try {
@@ -1910,12 +1741,8 @@ function CourseRequirements() {
           student_section_id: Number(studentSectionId),
           lecturer_id: Number(lecturerId),
           sessions_per_week: Number(sessionsPerWeek),
-          long_session_hours: Number(
-            longSessionHours
-          ),
-          short_session_hours: Number(
-            shortSessionHours
-          ),
+          long_session_hours: Number(longSessionHours),
+          short_session_hours: Number(shortSessionHours),
         }),
       });
 
@@ -1927,50 +1754,47 @@ function CourseRequirements() {
       setShortSessionHours("1");
 
       setMessage(
-        "Course requirement added successfully."
+        "Course requirement created successfully."
       );
 
-      await loadData();
+      loadData();
     } catch (error) {
       setMessage(error.message);
-    } finally {
-      setLoading(false);
     }
   }
 
-  function courseName(id) {
-    const course = courses.find(
-      (item) => item.id === id
-    );
+  function getCourseName(id) {
+    const course = courses.find((item) => item.id === id);
 
     return course
       ? `${course.code} - ${course.name}`
-      : id;
+      : `Course ${id}`;
   }
 
-  function sectionName(id) {
-    const section = sections.find(
-      (item) => item.id === id
-    );
+  function getSectionName(id) {
+    const section = sections.find((item) => item.id === id);
 
-    return section ? section.name : id;
+    return section
+      ? section.name
+      : `Section ${id}`;
   }
 
-  function lecturerName(id) {
+  function getLecturerName(id) {
     const lecturer = lecturers.find(
       (item) => item.id === id
     );
 
-    return lecturer ? lecturer.name : id;
+    return lecturer
+      ? lecturer.name
+      : `Lecturer ${id}`;
   }
 
   return (
     <div>
       <h1>Course Requirements</h1>
-
       <p>
-        Define which lecturer teaches which course
-        for each student section.
+        Define which lecturer teaches which course for each
+        student section.
       </p>
 
       <div className="form-card">
@@ -1983,19 +1807,15 @@ function CourseRequirements() {
 
               <select
                 value={courseId}
-                onChange={(e) =>
-                  setCourseId(e.target.value)
+                onChange={(event) =>
+                  setCourseId(event.target.value)
                 }
+                required
               >
-                <option value="">
-                  Select Course
-                </option>
+                <option value="">Select Course</option>
 
                 {courses.map((course) => (
-                  <option
-                    key={course.id}
-                    value={course.id}
-                  >
+                  <option key={course.id} value={course.id}>
                     {course.code} - {course.name}
                   </option>
                 ))}
@@ -2007,19 +1827,15 @@ function CourseRequirements() {
 
               <select
                 value={studentSectionId}
-                onChange={(e) =>
-                  setStudentSectionId(e.target.value)
+                onChange={(event) =>
+                  setStudentSectionId(event.target.value)
                 }
+                required
               >
-                <option value="">
-                  Select Student Section
-                </option>
+                <option value="">Select Section</option>
 
                 {sections.map((section) => (
-                  <option
-                    key={section.id}
-                    value={section.id}
-                  >
+                  <option key={section.id} value={section.id}>
                     {section.name}
                   </option>
                 ))}
@@ -2031,13 +1847,12 @@ function CourseRequirements() {
 
               <select
                 value={lecturerId}
-                onChange={(e) =>
-                  setLecturerId(e.target.value)
+                onChange={(event) =>
+                  setLecturerId(event.target.value)
                 }
+                required
               >
-                <option value="">
-                  Select Lecturer
-                </option>
+                <option value="">Select Lecturer</option>
 
                 {lecturers.map((lecturer) => (
                   <option
@@ -2057,9 +1872,10 @@ function CourseRequirements() {
                 type="number"
                 min="1"
                 value={sessionsPerWeek}
-                onChange={(e) =>
-                  setSessionsPerWeek(e.target.value)
+                onChange={(event) =>
+                  setSessionsPerWeek(event.target.value)
                 }
+                required
               />
             </div>
 
@@ -2070,9 +1886,10 @@ function CourseRequirements() {
                 type="number"
                 min="1"
                 value={longSessionHours}
-                onChange={(e) =>
-                  setLongSessionHours(e.target.value)
+                onChange={(event) =>
+                  setLongSessionHours(event.target.value)
                 }
+                required
               />
             </div>
 
@@ -2083,29 +1900,25 @@ function CourseRequirements() {
                 type="number"
                 min="1"
                 value={shortSessionHours}
-                onChange={(e) =>
-                  setShortSessionHours(e.target.value)
+                onChange={(event) =>
+                  setShortSessionHours(event.target.value)
                 }
+                required
               />
             </div>
           </div>
 
-          <button
-            className="primary-button"
-            disabled={loading}
-          >
-            {loading ? "Adding..." : "Add Requirement"}
+          <button className="primary-button" type="submit">
+            Add Requirement
           </button>
         </form>
 
-        {message && (
-          <p className="form-message">{message}</p>
-        )}
+        {message && <p className="form-message">{message}</p>}
       </div>
 
       <div className="table-card">
         <div className="table-header">
-          <h2>Course Requirements</h2>
+          <h2>Requirement List</h2>
 
           <button
             className="secondary-button"
@@ -2115,49 +1928,51 @@ function CourseRequirements() {
           </button>
         </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Course</th>
-              <th>Section</th>
-              <th>Lecturer</th>
-              <th>Sessions/Week</th>
-              <th>Long</th>
-              <th>Short</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {requirements.map((requirement) => (
-              <tr key={requirement.id}>
-                <td>{requirement.id}</td>
-                <td>
-                  {courseName(requirement.course_id)}
-                </td>
-                <td>
-                  {sectionName(
-                    requirement.student_section_id
-                  )}
-                </td>
-                <td>
-                  {lecturerName(
-                    requirement.lecturer_id
-                  )}
-                </td>
-                <td>
-                  {requirement.sessions_per_week}
-                </td>
-                <td>
-                  {requirement.long_session_hours}h
-                </td>
-                <td>
-                  {requirement.short_session_hours}h
-                </td>
+        {requirements.length === 0 ? (
+          <p className="empty-message">
+            No course requirements found.
+          </p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Course</th>
+                <th>Section</th>
+                <th>Lecturer</th>
+                <th>Sessions</th>
+                <th>Long Hours</th>
+                <th>Short Hours</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {requirements.map((requirement) => (
+                <tr key={requirement.id}>
+                  <td>{requirement.id}</td>
+
+                  <td>
+                    {getCourseName(requirement.course_id)}
+                  </td>
+
+                  <td>
+                    {getSectionName(
+                      requirement.student_section_id
+                    )}
+                  </td>
+
+                  <td>
+                    {getLecturerName(requirement.lecturer_id)}
+                  </td>
+
+                  <td>{requirement.sessions_per_week}</td>
+                  <td>{requirement.long_session_hours}</td>
+                  <td>{requirement.short_session_hours}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
@@ -2177,7 +1992,6 @@ function Constraints() {
   const [weight, setWeight] = useState("1");
 
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
 
   async function loadConstraints() {
     try {
@@ -2192,15 +2006,8 @@ function Constraints() {
     loadConstraints();
   }, []);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-
-    if (!name.trim() || !type || !weight) {
-      setMessage("Please fill in all required fields.");
-      return;
-    }
-
-    setLoading(true);
+  async function handleSubmit(event) {
+    event.preventDefault();
     setMessage("");
 
     try {
@@ -2209,7 +2016,7 @@ function Constraints() {
         body: JSON.stringify({
           name,
           type,
-          description,
+          description: description || null,
           is_active: isActive,
           weight: Number(weight),
         }),
@@ -2221,26 +2028,18 @@ function Constraints() {
       setIsActive(true);
       setWeight("1");
 
-      setMessage(
-        "Constraint added successfully."
-      );
+      setMessage("Constraint created successfully.");
 
-      await loadConstraints();
+      loadConstraints();
     } catch (error) {
       setMessage(error.message);
-    } finally {
-      setLoading(false);
     }
   }
 
   return (
     <div>
       <h1>Constraints</h1>
-
-      <p>
-        Manage scheduling rules and optimization
-        constraints.
-      </p>
+      <p>Manage scheduling constraints.</p>
 
       <div className="form-card">
         <h2>Add Constraint</h2>
@@ -2248,12 +2047,13 @@ function Constraints() {
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
             <div className="form-group">
-              <label>Constraint Name</label>
+              <label>Name</label>
 
               <input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(event) => setName(event.target.value)}
                 placeholder="No Lecturer Conflict"
+                required
               />
             </div>
 
@@ -2262,9 +2062,7 @@ function Constraints() {
 
               <select
                 value={type}
-                onChange={(e) =>
-                  setType(e.target.value)
-                }
+                onChange={(event) => setType(event.target.value)}
               >
                 <option value="HARD">HARD</option>
                 <option value="SOFT">SOFT</option>
@@ -2276,10 +2074,10 @@ function Constraints() {
 
               <input
                 value={description}
-                onChange={(e) =>
-                  setDescription(e.target.value)
+                onChange={(event) =>
+                  setDescription(event.target.value)
                 }
-                placeholder="A lecturer cannot teach two classes at once."
+                placeholder="Lecturer cannot teach two classes at once."
               />
             </div>
 
@@ -2290,9 +2088,10 @@ function Constraints() {
                 type="number"
                 min="1"
                 value={weight}
-                onChange={(e) =>
-                  setWeight(e.target.value)
+                onChange={(event) =>
+                  setWeight(event.target.value)
                 }
+                required
               />
             </div>
 
@@ -2301,10 +2100,8 @@ function Constraints() {
 
               <select
                 value={isActive ? "true" : "false"}
-                onChange={(e) =>
-                  setIsActive(
-                    e.target.value === "true"
-                  )
+                onChange={(event) =>
+                  setIsActive(event.target.value === "true")
                 }
               >
                 <option value="true">Active</option>
@@ -2313,22 +2110,17 @@ function Constraints() {
             </div>
           </div>
 
-          <button
-            className="primary-button"
-            disabled={loading}
-          >
-            {loading ? "Adding..." : "Add Constraint"}
+          <button className="primary-button" type="submit">
+            Add Constraint
           </button>
         </form>
 
-        {message && (
-          <p className="form-message">{message}</p>
-        )}
+        {message && <p className="form-message">{message}</p>}
       </div>
 
       <div className="table-card">
         <div className="table-header">
-          <h2>Constraints</h2>
+          <h2>Constraint List</h2>
 
           <button
             className="secondary-button"
@@ -2338,35 +2130,41 @@ function Constraints() {
           </button>
         </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Description</th>
-              <th>Active</th>
-              <th>Weight</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {constraints.map((constraint) => (
-              <tr key={constraint.id}>
-                <td>{constraint.id}</td>
-                <td>{constraint.name}</td>
-                <td>{constraint.type}</td>
-                <td>{constraint.description}</td>
-                <td>
-                  {constraint.is_active
-                    ? "Yes"
-                    : "No"}
-                </td>
-                <td>{constraint.weight}</td>
+        {constraints.length === 0 ? (
+          <p className="empty-message">
+            No constraints found.
+          </p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Description</th>
+                <th>Active</th>
+                <th>Weight</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {constraints.map((constraint) => (
+                <tr key={constraint.id}>
+                  <td>{constraint.id}</td>
+                  <td>{constraint.name}</td>
+                  <td>{constraint.type}</td>
+                  <td>{constraint.description || "-"}</td>
+                  <td>
+                    {constraint.is_active
+                      ? "Active"
+                      : "Inactive"}
+                  </td>
+                  <td>{constraint.weight}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
@@ -2377,36 +2175,26 @@ function Constraints() {
 ========================================================= */
 
 function GenerateSchedule() {
-  const navigate = useNavigate();
-
-  const [generating, setGenerating] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [result, setResult] = useState(null);
 
   async function generateSchedule() {
-    setGenerating(true);
+    setLoading(true);
     setMessage("");
     setResult(null);
 
     try {
-      const data = await apiRequest(
-        "/schedules/generate",
-        {
-          method: "POST",
-        }
-      );
+      const data = await apiRequest("/schedules/generate", {
+        method: "POST",
+      });
 
       setResult(data);
-
-      setMessage(
-        "Schedule generated successfully."
-      );
+      setMessage("Schedule generated successfully.");
     } catch (error) {
-      setMessage(
-        `Schedule generation failed: ${error.message}`
-      );
+      setMessage(error.message);
     } finally {
-      setGenerating(false);
+      setLoading(false);
     }
   }
 
@@ -2415,68 +2203,43 @@ function GenerateSchedule() {
       <h1>Generate Schedule</h1>
 
       <p>
-        Use the QINBIR optimization engine to generate
-        a valid university timetable.
+        Generate an automatic university timetable using the
+        scheduling engine.
       </p>
 
       <div className="form-card">
         <h2>Automatic Scheduler</h2>
 
         <p>
-          The scheduler uses courses, student sections,
-          lecturers, rooms, time slots, and lecturer
-          availability.
+          The scheduler will create a new automatic draft schedule
+          while respecting the configured scheduling rules.
         </p>
 
         <button
           className="primary-button"
           onClick={generateSchedule}
-          disabled={generating}
+          disabled={loading}
         >
-          {generating
-            ? "Generating Schedule..."
-            : "Generate Schedule"}
+          {loading ? "Generating..." : "Generate Schedule"}
         </button>
 
-        {message && (
-          <p className="form-message">{message}</p>
-        )}
+        {message && <p className="form-message">{message}</p>}
 
         {result && (
-          <div
-            style={{
-              marginTop: "20px",
-              padding: "20px",
-              background: "#f8fafc",
-              border: "1px solid #e5e7eb",
-              borderRadius: "8px",
-            }}
-          >
-            <h3>Generation Result</h3>
-
-            <p>
-              <strong>Status:</strong>{" "}
-              {result.status}
-            </p>
-
+          <div className="form-message">
             <p>
               <strong>Schedule ID:</strong>{" "}
               {result.schedule_id}
             </p>
 
             <p>
+              <strong>Status:</strong> {result.status}
+            </p>
+
+            <p>
               <strong>Entries Created:</strong>{" "}
               {result.entries_created}
             </p>
-
-            <button
-              className="secondary-button"
-              onClick={() =>
-                navigate("/timetable")
-              }
-            >
-              View Timetable
-            </button>
           </div>
         )}
       </div>
@@ -2490,11 +2253,11 @@ function GenerateSchedule() {
 
 function Timetable() {
   const [schedules, setSchedules] = useState([]);
-  const [scheduleId, setScheduleId] = useState("");
-  const [schedule, setSchedule] = useState(null);
-  const [entries, setEntries] = useState([]);
+  const [selectedScheduleId, setSelectedScheduleId] =
+    useState("");
+  const [scheduleData, setScheduleData] = useState(null);
+
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
 
   async function loadSchedules() {
     try {
@@ -2503,46 +2266,39 @@ function Timetable() {
       setSchedules(data);
 
       if (data.length > 0) {
-        const automaticSchedules = data.filter(
-          (item) =>
-            item.name ===
-              "Automatically Generated Schedule" &&
-            item.status === "DRAFT"
+        const automaticSchedule =
+          [...data]
+            .reverse()
+            .find(
+              (schedule) =>
+                schedule.name ===
+                  "Automatically Generated Schedule" &&
+                schedule.status === "DRAFT"
+            ) || data[data.length - 1];
+
+        setSelectedScheduleId(
+          String(automaticSchedule.id)
         );
-
-        const latest =
-          automaticSchedules.length > 0
-            ? automaticSchedules[
-                automaticSchedules.length - 1
-              ]
-            : data[data.length - 1];
-
-        setScheduleId(String(latest.id));
       }
     } catch (error) {
       setMessage(error.message);
     }
   }
 
-  async function loadSchedule(id) {
-    if (!id) return;
-
-    setLoading(true);
-    setMessage("");
+  async function loadSchedule(scheduleId) {
+    if (!scheduleId) {
+      return;
+    }
 
     try {
       const data = await apiRequest(
-        `/schedules/${id}`
+        `/schedules/${scheduleId}`
       );
 
-      setSchedule(data.schedule);
-      setEntries(data.entries || []);
+      setScheduleData(data);
+      setMessage("");
     } catch (error) {
       setMessage(error.message);
-      setSchedule(null);
-      setEntries([]);
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -2551,170 +2307,183 @@ function Timetable() {
   }, []);
 
   useEffect(() => {
-    if (scheduleId) {
-      loadSchedule(scheduleId);
+    if (selectedScheduleId) {
+      loadSchedule(selectedScheduleId);
     }
-  }, [scheduleId]);
-
-  function dayOrder(day) {
-    const order = {
-      Monday: 1,
-      Tuesday: 2,
-      Wednesday: 3,
-      Thursday: 4,
-      Friday: 5,
-      Saturday: 6,
-      Sunday: 7,
-    };
-
-    return order[day] || 99;
-  }
-
-  const sortedEntries = [...entries].sort((a, b) => {
-    const dayDifference =
-      dayOrder(a.day) - dayOrder(b.day);
-
-    if (dayDifference !== 0) {
-      return dayDifference;
-    }
-
-    return a.start_time.localeCompare(
-      b.start_time
-    );
-  });
+  }, [selectedScheduleId]);
 
   return (
     <div>
       <h1>Timetable</h1>
 
-      <p>
-        View the generated university course
-        timetable.
-      </p>
+      <p>View generated university schedules.</p>
 
       <div className="form-card">
-        <h2>Select Schedule</h2>
+        <div className="form-group">
+          <label>Select Schedule</label>
 
-        <div className="form-grid">
-          <div className="form-group">
-            <label>Schedule</label>
+          <select
+            value={selectedScheduleId}
+            onChange={(event) =>
+              setSelectedScheduleId(event.target.value)
+            }
+          >
+            <option value="">Select Schedule</option>
 
-            <select
-              value={scheduleId}
-              onChange={(e) =>
-                setScheduleId(e.target.value)
-              }
-            >
-              <option value="">
-                Select Schedule
+            {schedules.map((schedule) => (
+              <option
+                key={schedule.id}
+                value={schedule.id}
+              >
+                #{schedule.id} - {schedule.name} (
+                {schedule.status})
               </option>
-
-              {schedules.map((item) => (
-                <option
-                  key={item.id}
-                  value={item.id}
-                >
-                  #{item.id} — {item.name} —{" "}
-                  {item.status}
-                </option>
-              ))}
-            </select>
-          </div>
+            ))}
+          </select>
         </div>
-
-        <button
-          className="secondary-button"
-          onClick={loadSchedules}
-        >
-          Refresh Schedules
-        </button>
       </div>
 
-      {message && (
-        <p className="form-message">{message}</p>
-      )}
+      {message && <p className="form-message">{message}</p>}
 
-      {loading && (
-        <p className="form-message">
-          Loading timetable...
-        </p>
-      )}
+      {scheduleData && (
+        <>
+          <div className="table-card">
+            <div className="table-header">
+              <div>
+                <h2>{scheduleData.schedule.name}</h2>
 
-      {schedule && (
-        <div className="table-card">
-          <div className="table-header">
-            <div>
-              <h2>{schedule.name}</h2>
+                <p>
+                  Status: {scheduleData.schedule.status}
+                </p>
+              </div>
 
-              <p>
-                Status: <strong>{schedule.status}</strong>
-              </p>
+              <button
+                className="secondary-button"
+                onClick={() =>
+                  loadSchedule(selectedScheduleId)
+                }
+              >
+                Refresh
+              </button>
             </div>
 
-            <button
-              className="secondary-button"
-              onClick={() =>
-                loadSchedule(scheduleId)
-              }
-            >
-              Refresh
-            </button>
+            {scheduleData.entries.length === 0 ? (
+              <p className="empty-message">
+                No schedule entries found.
+              </p>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Day</th>
+                    <th>Time</th>
+                    <th>Course</th>
+                    <th>Lecturer</th>
+                    <th>Section</th>
+                    <th>Students</th>
+                    <th>Room</th>
+                    <th>Capacity</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {scheduleData.entries.map((entry) => (
+                    <tr key={entry.id}>
+                      <td>{entry.day}</td>
+
+                      <td>
+                        {formatTime(entry.start_time)} -{" "}
+                        {formatTime(entry.end_time)}
+                      </td>
+
+                      <td>{entry.course}</td>
+
+                      <td>{entry.lecturer}</td>
+
+                      <td>{entry.student_section}</td>
+
+                      <td>{entry.student_count}</td>
+
+                      <td>{entry.room}</td>
+
+                      <td>{entry.room_capacity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            <p className="form-message">
+              Total schedule entries:{" "}
+              {scheduleData.entries_count}
+            </p>
           </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Day</th>
-                <th>Time</th>
-                <th>Course</th>
-                <th>Lecturer</th>
-                <th>Section</th>
-                <th>Students</th>
-                <th>Room</th>
-                <th>Capacity</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {sortedEntries.map((entry) => (
-                <tr key={entry.id}>
-                  <td>{entry.day}</td>
-
-                  <td>
-                    {entry.start_time} -{" "}
-                    {entry.end_time}
-                  </td>
-
-                  <td>{entry.course}</td>
-
-                  <td>{entry.lecturer}</td>
-
-                  <td>
-                    {entry.student_section}
-                  </td>
-
-                  <td>{entry.student_count}</td>
-
-                  <td>{entry.room}</td>
-
-                  <td>{entry.room_capacity}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <p
-            style={{
-              marginTop: "20px",
-              color: "#64748b",
-            }}
-          >
-            Total timetable entries:{" "}
-            <strong>{entries.length}</strong>
-          </p>
-        </div>
+        </>
       )}
     </div>
+  );
+}
+
+/* =========================================================
+   ROUTER
+========================================================= */
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<Dashboard />} />
+
+      <Route
+        path="/departments"
+        element={<Departments />}
+      />
+
+      <Route path="/programs" element={<Programs />} />
+
+      <Route path="/courses" element={<Courses />} />
+
+      <Route
+        path="/lecturers"
+        element={<Lecturers />}
+      />
+
+      <Route
+        path="/student-sections"
+        element={<StudentSections />}
+      />
+
+      <Route path="/rooms" element={<Rooms />} />
+
+      <Route
+        path="/time-slots"
+        element={<TimeSlots />}
+      />
+
+      <Route
+        path="/lecturer-availability"
+        element={<LecturerAvailability />}
+      />
+
+      <Route
+        path="/course-requirements"
+        element={<CourseRequirements />}
+      />
+
+      <Route
+        path="/constraints"
+        element={<Constraints />}
+      />
+
+      <Route
+        path="/generate-schedule"
+        element={<GenerateSchedule />}
+      />
+
+      <Route
+        path="/timetable"
+        element={<Timetable />}
+      />
+    </Routes>
   );
 }
 
@@ -2722,79 +2491,12 @@ function Timetable() {
    APP
 ========================================================= */
 
-function App() {
+export default function App() {
   return (
     <BrowserRouter>
       <Layout>
-        <Routes>
-          <Route
-            path="/"
-            element={<Dashboard />}
-          />
-
-          <Route
-            path="/departments"
-            element={<Departments />}
-          />
-
-          <Route
-            path="/programs"
-            element={<Programs />}
-          />
-
-          <Route
-            path="/courses"
-            element={<Courses />}
-          />
-
-          <Route
-            path="/lecturers"
-            element={<Lecturers />}
-          />
-
-          <Route
-            path="/student-sections"
-            element={<StudentSections />}
-          />
-
-          <Route
-            path="/rooms"
-            element={<Rooms />}
-          />
-
-          <Route
-            path="/time-slots"
-            element={<TimeSlots />}
-          />
-
-          <Route
-            path="/lecturer-availability"
-            element={<LecturerAvailability />}
-          />
-
-          <Route
-            path="/course-requirements"
-            element={<CourseRequirements />}
-          />
-
-          <Route
-            path="/constraints"
-            element={<Constraints />}
-          />
-
-          <Route
-            path="/generate-schedule"
-            element={<GenerateSchedule />}
-          />
-
-          <Route
-            path="/timetable"
-            element={<Timetable />}
-          />
-        </Routes>
+        <AppRoutes />
       </Layout>
     </BrowserRouter>
   );
 }
-
-export default App;
