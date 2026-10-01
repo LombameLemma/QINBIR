@@ -8,6 +8,7 @@ from app.models.user import User
 from app.models.department import Department
 from app.models.program import Program
 from app.models.course import Course
+from app.models.program_course import ProgramCourse
 from app.models.lecturer import Lecturer
 from app.models.student import Student
 from app.models.student_section import StudentSection
@@ -18,12 +19,12 @@ from app.models.course_requirement import CourseRequirement
 from app.models.schedule import Schedule
 from app.models.schedule_entry import ScheduleEntry
 from app.models.constraint import Constraint
-
 from app.routes import (
     departments,
     programs,
     courses,
     lecturers,
+    users,
     student_sections,
     rooms,
     time_slots,
@@ -55,6 +56,7 @@ app.include_router(departments.router)
 app.include_router(programs.router)
 app.include_router(courses.router)
 app.include_router(lecturers.router)
+app.include_router(users.router)
 app.include_router(student_sections.router)
 app.include_router(rooms.router)
 app.include_router(time_slots.router)

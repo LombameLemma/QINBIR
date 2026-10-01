@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -21,7 +22,9 @@ class ConstraintCreate(BaseModel):
 
 
 @router.get("/")
-def get_constraints(db: Session = Depends(get_db)):
+def get_constraints(
+    db: Session = Depends(get_db)
+):
     return db.query(Constraint).all()
 
 

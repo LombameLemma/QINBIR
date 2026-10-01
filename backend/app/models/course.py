@@ -8,14 +8,19 @@ class Course(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
-    code = Column(String(20), unique=True, nullable=False, index=True)
+    code = Column(
+        String(20),
+        unique=True,
+        nullable=False,
+        index=True
+    )
 
-    name = Column(String(150), nullable=False)
+    name = Column(
+        String(150),
+        nullable=False
+    )
 
-    credit_hours = Column(Integer, nullable=False)
-
-    program_id = Column(
+    credit_hours = Column(
         Integer,
-        ForeignKey("programs.id"),
         nullable=False
     )
