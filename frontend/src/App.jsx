@@ -11,7 +11,8 @@ import {
    API
 ============================================================ */
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
 async function apiRequest(endpoint, options = {}) {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -43,7 +44,100 @@ async function apiRequest(endpoint, options = {}) {
 /* ============================================================
    GLOBAL STYLES
 ============================================================ */
+const responsiveStyles = `
+  * {
+    box-sizing: border-box;
+  }
 
+  html, body, #root {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100%;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  @media (max-width: 1100px) {
+    .qinbir-layout {
+      flex-direction: column !important;
+    }
+
+    .qinbir-sidebar {
+      width: 100% !important;
+      min-height: auto !important;
+    }
+
+    .qinbir-main {
+      width: 100% !important;
+      padding: 20px !important;
+    }
+
+    .qinbir-stat-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+
+    .qinbir-form-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .qinbir-sidebar {
+      display: none !important;
+    }
+
+    .qinbir-main {
+      padding: 16px !important;
+    }
+
+    .qinbir-stat-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 12px !important;
+    }
+
+    .qinbir-form-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    .qinbir-card {
+      padding: 16px !important;
+    }
+
+    .qinbir-page-title {
+      font-size: 24px !important;
+    }
+
+    .qinbir-table-wrap {
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .qinbir-table {
+      min-width: 700px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .qinbir-main {
+      padding: 12px !important;
+    }
+
+    .qinbir-stat-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    .qinbir-card {
+      padding: 12px !important;
+    }
+
+    .qinbir-page-title {
+      font-size: 21px !important;
+    }
+  }
+`;
 const styles = {
   app: {
     minHeight: "100vh",
