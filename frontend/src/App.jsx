@@ -60,6 +60,17 @@ const responsiveStyles = `
     overflow-x: hidden;
   }
 
+  .qinbir-desktop-timetable { display: block; }
+  .qinbir-mobile-timetable { display: none; }
+  .qinbir-desktop-entry-table { display: block; }
+  .qinbir-mobile-entry-cards { display: none; }
+
+  .qinbir-mobile-menu-button,
+  .qinbir-mobile-close,
+  .qinbir-sidebar-overlay {
+    display: none;
+  }
+
   @media (max-width: 1100px) {
     .qinbir-main {
       margin-left: 220px !important;
@@ -103,23 +114,49 @@ const responsiveStyles = `
     .qinbir-layout {
       display: block !important;
       min-height: 100vh !important;
+      width: 100% !important;
+      overflow-x: hidden !important;
     }
 
     .qinbir-sidebar {
-      position: sticky !important;
+      position: fixed !important;
       top: 0 !important;
       left: 0 !important;
-      bottom: auto !important;
-      width: 100% !important;
-      min-height: 0 !important;
-      height: auto !important;
-      overflow-x: auto !important;
-      overflow-y: hidden !important;
-      z-index: 100 !important;
+      bottom: 0 !important;
+      width: min(290px, 86vw) !important;
+      min-height: 100vh !important;
+      height: 100vh !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+      z-index: 1000 !important;
+      transform: translateX(-105%) !important;
+      transition: transform 0.25s ease !important;
+      box-shadow: 12px 0 30px rgba(0, 0, 0, 0.22) !important;
+    }
+
+    .qinbir-sidebar.qinbir-sidebar-open {
+      transform: translateX(0) !important;
+    }
+
+    .qinbir-sidebar-overlay {
+      display: block !important;
+      position: fixed !important;
+      inset: 0 !important;
+      background: rgba(8, 15, 35, 0.48) !important;
+      z-index: 999 !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transition: opacity 0.25s ease !important;
+    }
+
+    .qinbir-sidebar-overlay.qinbir-sidebar-overlay-open {
+      opacity: 1 !important;
+      pointer-events: auto !important;
     }
 
     .qinbir-brand {
-      padding: 14px 16px !important;
+      padding: 18px 16px !important;
+      position: relative !important;
     }
 
     .qinbir-brand-name {
@@ -130,32 +167,87 @@ const responsiveStyles = `
       font-size: 10px !important;
     }
 
+    .qinbir-mobile-close {
+      display: flex !important;
+      position: absolute !important;
+      top: 15px !important;
+      right: 14px !important;
+      width: 34px !important;
+      height: 34px !important;
+      align-items: center !important;
+      justify-content: center !important;
+      border: 1px solid rgba(255,255,255,0.16) !important;
+      border-radius: 9px !important;
+      background: rgba(255,255,255,0.08) !important;
+      color: white !important;
+      font-size: 21px !important;
+      cursor: pointer !important;
+    }
+
     .qinbir-nav {
       display: flex !important;
-      gap: 8px !important;
-      padding: 8px !important;
-      min-width: max-content !important;
+      flex-direction: column !important;
+      gap: 16px !important;
+      padding: 12px !important;
+      min-width: 0 !important;
+      width: 100% !important;
     }
 
     .qinbir-nav-section {
-      display: none !important;
+      display: block !important;
+      margin: 0 8px 7px !important;
+      color: #8f9dc2 !important;
+      font-size: 10px !important;
+      letter-spacing: 0.08em !important;
+      text-transform: uppercase !important;
     }
 
     .qinbir-nav-group {
       display: flex !important;
-      gap: 5px !important;
-      align-items: center !important;
+      flex-direction: column !important;
+      gap: 4px !important;
+      align-items: stretch !important;
+      width: 100% !important;
     }
 
     .qinbir-nav-link {
-      white-space: nowrap !important;
+      width: 100% !important;
+      white-space: normal !important;
       margin-bottom: 0 !important;
-      padding: 9px 11px !important;
-      font-size: 12px !important;
+      padding: 11px 12px !important;
+      font-size: 13px !important;
+      min-height: 42px !important;
     }
 
     .qinbir-sidebar-info {
-      display: none !important;
+      display: block !important;
+      margin: 10px 14px 20px !important;
+    }
+
+    .qinbir-mobile-menu-button {
+      display: flex !important;
+      flex-shrink: 0 !important;
+      width: 38px !important;
+      height: 38px !important;
+      align-items: center !important;
+      justify-content: center !important;
+      border: 0 !important;
+      border-radius: 10px !important;
+      background: #eef3ff !important;
+      color: #3156d3 !important;
+      font-size: 22px !important;
+      cursor: pointer !important;
+    }
+
+    .qinbir-topbar-left {
+      display: flex !important;
+      align-items: center !important;
+      gap: 10px !important;
+      min-width: 0 !important;
+    }
+
+    .qinbir-topbar-left > div:last-child {
+      min-width: 0 !important;
     }
 
     .qinbir-main {
@@ -197,11 +289,15 @@ const responsiveStyles = `
       padding: 14px !important;
       width: 100% !important;
       max-width: none !important;
+      min-width: 0 !important;
+      overflow-x: hidden !important;
     }
 
     .qinbir-card {
       padding: 16px !important;
       width: 100% !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
     }
 
     .qinbir-page-title {
@@ -248,10 +344,20 @@ const responsiveStyles = `
     }
 
     .qinbir-table-wrap {
+      display: block !important;
       width: 100% !important;
       max-width: 100% !important;
+      min-width: 0 !important;
       overflow-x: auto !important;
+      overflow-y: hidden !important;
       -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain;
+      scrollbar-width: thin;
+    }
+
+    .qinbir-table-wrap table {
+      width: max-content !important;
+      max-width: none !important;
     }
 
     .qinbir-table {
@@ -264,8 +370,82 @@ const responsiveStyles = `
       -webkit-overflow-scrolling: touch;
     }
 
-    .qinbir-timetable-inner {
-      min-width: 900px !important;
+    .qinbir-desktop-timetable {
+      display: none !important;
+    }
+
+    .qinbir-mobile-timetable {
+      display: block !important;
+    }
+
+    .qinbir-mobile-day {
+      border: 1px solid #e5e7eb !important;
+      border-radius: 12px !important;
+      overflow: hidden !important;
+      margin-bottom: 12px !important;
+      background: #ffffff !important;
+    }
+
+    .qinbir-mobile-day-title {
+      padding: 12px 14px !important;
+      background: #f8fafc !important;
+      border-bottom: 1px solid #e5e7eb !important;
+      font-size: 14px !important;
+      font-weight: 800 !important;
+      color: #1e293b !important;
+    }
+
+    .qinbir-mobile-entry {
+      display: grid !important;
+      grid-template-columns: 58px minmax(0, 1fr) !important;
+      gap: 10px !important;
+      padding: 11px 12px !important;
+      border-bottom: 1px solid #edf0f4 !important;
+    }
+
+    .qinbir-mobile-entry:last-child {
+      border-bottom: 0 !important;
+    }
+
+    .qinbir-mobile-time {
+      font-size: 10px !important;
+      font-weight: 700 !important;
+      color: #64748b !important;
+      line-height: 1.35 !important;
+      padding-top: 2px !important;
+      word-break: break-word !important;
+    }
+
+    .qinbir-mobile-course {
+      font-size: 12px !important;
+      font-weight: 800 !important;
+      color: #1e3a8a !important;
+      line-height: 1.35 !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    .qinbir-mobile-meta {
+      margin-top: 3px !important;
+      font-size: 10px !important;
+      color: #64748b !important;
+      line-height: 1.4 !important;
+      overflow-wrap: anywhere !important;
+    }
+
+    .qinbir-desktop-entry-table {
+      display: none !important;
+    }
+
+    .qinbir-mobile-entry-cards {
+      display: block !important;
+    }
+
+    .qinbir-mobile-entry-card {
+      padding: 12px !important;
+      border: 1px solid #e5e7eb !important;
+      border-radius: 10px !important;
+      margin-bottom: 9px !important;
+      background: #fff !important;
     }
 
     .qinbir-generate-card {
@@ -737,7 +917,7 @@ function EmptyState({ text }) {
    SIDEBAR
 ============================================================ */
 
-function Sidebar() {
+function Sidebar({ isOpen, onClose }) {
   const menuSections = [
     {
       title: "Overview",
@@ -787,12 +967,32 @@ function Sidebar() {
   ];
 
   return (
-    <aside className="qinbir-sidebar" style={styles.sidebar}>
+    <>
+      <div
+        className={`qinbir-sidebar-overlay ${
+          isOpen ? "qinbir-sidebar-overlay-open" : ""
+        }`}
+        onClick={onClose}
+      />
+
+      <aside
+        className={`qinbir-sidebar ${isOpen ? "qinbir-sidebar-open" : ""}`}
+        style={styles.sidebar}
+      >
       <div className="qinbir-brand" style={styles.brand}>
         <div className="qinbir-brand-name" style={styles.brandName}>QINBIR</div>
         <div className="qinbir-brand-subtitle" style={styles.brandSubtitle}>
           Smart University Scheduling
         </div>
+
+        <button
+          className="qinbir-mobile-close"
+          type="button"
+          aria-label="Close navigation menu"
+          onClick={onClose}
+        >
+          ×
+        </button>
       </div>
 
       <div className="qinbir-nav" style={styles.nav}>
@@ -810,6 +1010,7 @@ function Sidebar() {
                   ...styles.navLink,
                   ...(isActive ? styles.navLinkActive : {}),
                 })}
+                onClick={onClose}
               >
                 <span
                   style={{
@@ -858,7 +1059,8 @@ function Sidebar() {
           Intelligent timetable planning for modern universities.
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 
@@ -866,17 +1068,29 @@ function Sidebar() {
    TOP BAR
 ============================================================ */
 
-function TopBar() {
+function TopBar({ onMenuClick }) {
   return (
     <header className="qinbir-topbar" style={styles.topbar}>
-      <div>
-        <div className="qinbir-topbar-title" style={styles.topbarTitle}>QINBIR Smart Scheduler</div>
-        <div className="qinbir-topbar-sub" style={styles.topbarSub}>
-          University Academic Scheduling Platform
+      <div className="qinbir-topbar-left">
+        <button
+          className="qinbir-mobile-menu-button"
+          type="button"
+          aria-label="Open navigation menu"
+          onClick={onMenuClick}
+        >
+          ☰
+        </button>
+
+        <div>
+          <div className="qinbir-topbar-title" style={styles.topbarTitle}>QINBIR Smart Scheduler</div>
+          <div className="qinbir-topbar-sub" style={styles.topbarSub}>
+            University Academic Scheduling Platform
+          </div>
         </div>
       </div>
 
       <div
+        className="qinbir-topbar-status"
         style={{
           display: "flex",
           alignItems: "center",
@@ -886,6 +1100,7 @@ function TopBar() {
         <span className="qinbir-badge" style={styles.badge}>● System Online</span>
 
         <div
+          className="qinbir-topbar-avatar"
           style={{
             width: "35px",
             height: "35px",
@@ -910,15 +1125,20 @@ function TopBar() {
 ============================================================ */
 
 function Layout({ children }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <>
       <style>{responsiveStyles}</style>
 
       <div className="qinbir-layout" style={styles.layout}>
-        <Sidebar />
+        <Sidebar
+          isOpen={menuOpen}
+          onClose={() => setMenuOpen(false)}
+        />
 
         <main className="qinbir-main" style={styles.main}>
-          <TopBar />
+          <TopBar onMenuClick={() => setMenuOpen(true)} />
 
           <div
             className="qinbir-content"
@@ -4050,6 +4270,7 @@ function Timetable() {
             </div>
 
             <div
+              className="qinbir-desktop-timetable"
               style={{
                 overflowX: "auto",
                 border: "1px solid #e5e7eb",
@@ -4237,6 +4458,50 @@ function Timetable() {
           </div>
 
           {/* =================================================
+              MOBILE TIMETABLE
+          ================================================= */}
+
+          <div className="qinbir-mobile-timetable">
+            {days.map((day) => {
+              const dayEntries = getEntriesForDay(day).sort((a, b) =>
+                String(a.start_time || "").localeCompare(String(b.start_time || ""))
+              );
+
+              return (
+                <div className="qinbir-mobile-day" key={day}>
+                  <div className="qinbir-mobile-day-title">{day}</div>
+
+                  {dayEntries.length ? (
+                    dayEntries.map((entry) => (
+                      <div className="qinbir-mobile-entry" key={entry.id}>
+                        <div className="qinbir-mobile-time">
+                          {entry.start_time}–{entry.end_time}
+                        </div>
+
+                        <div>
+                          <div className="qinbir-mobile-course">
+                            {entry.course}
+                          </div>
+                          <div className="qinbir-mobile-meta">
+                            {entry.room} • {entry.student_section}
+                          </div>
+                          <div className="qinbir-mobile-meta">
+                            {entry.lecturer}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="qinbir-mobile-meta" style={{ padding: "12px" }}>
+                      No classes scheduled.
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* =================================================
               DETAILED TABLE
           ================================================= */}
 
@@ -4270,7 +4535,10 @@ function Timetable() {
               </span>
             </div>
 
-            <div className="qinbir-table-wrap" style={styles.tableWrap}>
+            <div
+              className="qinbir-table-wrap qinbir-desktop-entry-table"
+              style={styles.tableWrap}
+            >
               <table className="qinbir-table" style={styles.table}>
                 <thead>
                   <tr>
@@ -4341,6 +4609,27 @@ function Timetable() {
                 <EmptyState
                   text="No schedule entries found."
                 />
+              )}
+            </div>
+
+            <div className="qinbir-mobile-entry-cards">
+              {(schedule.entries || []).map((entry) => (
+                <div className="qinbir-mobile-entry-card" key={entry.id}>
+                  <div className="qinbir-mobile-course">{entry.course || "—"}</div>
+                  <div className="qinbir-mobile-meta">
+                    {entry.day || "—"} • {entry.start_time || "—"}–{entry.end_time || "—"}
+                  </div>
+                  <div className="qinbir-mobile-meta">
+                    {entry.lecturer || "—"} • {entry.room || "—"}
+                  </div>
+                  <div className="qinbir-mobile-meta">
+                    {entry.student_section || "—"}
+                  </div>
+                </div>
+              ))}
+
+              {!schedule.entries?.length && (
+                <EmptyState text="No schedule entries found." />
               )}
             </div>
           </div>
