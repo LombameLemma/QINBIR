@@ -517,6 +517,111 @@ const responsiveStyles = `
       font-size: 21px !important;
     }
   }
+  /* =========================================================
+   EXTRA COMPACT MOBILE TABLES
+   Time Slots / Rooms / Lecturer Availability / Sections
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+  /* Reduce table wrapper spacing */
+  .qinbir-table-wrap {
+    margin-left: -4px;
+    margin-right: -4px;
+    width: calc(100% + 8px);
+    overflow-x: hidden;
+  }
+
+  .qinbir-table {
+    width: 100%;
+    min-width: 0 !important;
+    table-layout: fixed;
+  }
+
+  .qinbir-table th,
+  .qinbir-table td {
+    padding: 5px 4px !important;
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    white-space: normal !important;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .qinbir-table th {
+    font-size: 10px !important;
+    padding: 5px 3px !important;
+  }
+
+  /* Time Slots */
+  .qinbir-table tr td:first-child,
+  .qinbir-table tr th:first-child {
+    width: 10% !important;
+  }
+
+  /* Rooms */
+  .qinbir-table td,
+  .qinbir-table th {
+    max-width: 100%;
+  }
+
+  /* Lecturer Availability */
+  .qinbir-table td button,
+  .qinbir-table td a,
+  .qinbir-table button {
+    font-size: 10px !important;
+    padding: 3px 5px !important;
+    min-height: 26px;
+  }
+
+  /* Student Sections */
+  .qinbir-table td {
+    vertical-align: middle;
+  }
+
+  /* Remove excessive card/table spacing */
+  .qinbir-card {
+    padding: 10px !important;
+  }
+
+  /* Prevent long content from forcing the page wider */
+  .qinbir-content {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+}
+
+/* VERY SMALL PHONES */
+@media (max-width: 480px) {
+
+  .qinbir-table-wrap {
+    margin-left: -6px;
+    margin-right: -6px;
+    width: calc(100% + 12px);
+  }
+
+  .qinbir-table th,
+  .qinbir-table td {
+    padding: 4px 3px !important;
+    font-size: 10px !important;
+    line-height: 1.15 !important;
+  }
+
+  .qinbir-table th {
+    font-size: 9px !important;
+    padding: 4px 2px !important;
+  }
+
+  .qinbir-table button {
+    font-size: 9px !important;
+    padding: 2px 4px !important;
+    min-height: 23px;
+  }
+
+  .qinbir-card {
+    padding: 8px !important;
+  }
+}  
 `;
 const styles = {
   app: {
