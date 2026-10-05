@@ -61,18 +61,13 @@ const responsiveStyles = `
   }
 
   @media (max-width: 1100px) {
-    .qinbir-layout {
-      flex-direction: column !important;
-    }
-
-    .qinbir-sidebar {
-      width: 100% !important;
-      min-height: auto !important;
-    }
-
     .qinbir-main {
-      width: 100% !important;
-      padding: 20px !important;
+      margin-left: 220px !important;
+      width: calc(100% - 220px) !important;
+    }
+
+    .qinbir-content {
+      padding: 22px !important;
     }
 
     .qinbir-stat-grid {
@@ -82,47 +77,239 @@ const responsiveStyles = `
     .qinbir-form-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     }
+
+    .qinbir-dashboard-secondary {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .qinbir-dashboard-four {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .qinbir-dashboard-capabilities {
+      grid-template-columns: 1fr !important;
+    }
+
+    .qinbir-action-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .qinbir-page-title {
+      flex-wrap: wrap !important;
+    }
   }
 
   @media (max-width: 768px) {
+    .qinbir-layout {
+      display: block !important;
+      min-height: 100vh !important;
+    }
+
     .qinbir-sidebar {
+      position: sticky !important;
+      top: 0 !important;
+      left: 0 !important;
+      bottom: auto !important;
+      width: 100% !important;
+      min-height: 0 !important;
+      height: auto !important;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+      z-index: 100 !important;
+    }
+
+    .qinbir-brand {
+      padding: 14px 16px !important;
+    }
+
+    .qinbir-brand-name {
+      font-size: 22px !important;
+    }
+
+    .qinbir-brand-subtitle {
+      font-size: 10px !important;
+    }
+
+    .qinbir-nav {
+      display: flex !important;
+      gap: 8px !important;
+      padding: 8px !important;
+      min-width: max-content !important;
+    }
+
+    .qinbir-nav-section {
+      display: none !important;
+    }
+
+    .qinbir-nav-group {
+      display: flex !important;
+      gap: 5px !important;
+      align-items: center !important;
+    }
+
+    .qinbir-nav-link {
+      white-space: nowrap !important;
+      margin-bottom: 0 !important;
+      padding: 9px 11px !important;
+      font-size: 12px !important;
+    }
+
+    .qinbir-sidebar-info {
       display: none !important;
     }
 
     .qinbir-main {
+      margin-left: 0 !important;
+      width: 100% !important;
+      min-width: 0 !important;
+    }
+
+    .qinbir-topbar {
+      height: auto !important;
+      min-height: 62px !important;
+      padding: 10px 14px !important;
+      gap: 10px !important;
+    }
+
+    .qinbir-topbar-title {
+      font-size: 15px !important;
+    }
+
+    .qinbir-topbar-sub {
+      font-size: 10px !important;
+    }
+
+    .qinbir-topbar-status {
+      flex-shrink: 0 !important;
+    }
+
+    .qinbir-topbar-status .qinbir-badge {
+      font-size: 9px !important;
+      padding: 4px 7px !important;
+    }
+
+    .qinbir-topbar-avatar {
+      width: 31px !important;
+      height: 31px !important;
+    }
+
+    .qinbir-content {
+      padding: 14px !important;
+      width: 100% !important;
+      max-width: none !important;
+    }
+
+    .qinbir-card {
       padding: 16px !important;
+      width: 100% !important;
+    }
+
+    .qinbir-page-title {
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 10px !important;
+      margin-bottom: 16px !important;
+    }
+
+    .qinbir-page-title h1 {
+      font-size: 23px !important;
+      line-height: 1.2 !important;
+    }
+
+    .qinbir-page-title-action {
+      width: 100% !important;
     }
 
     .qinbir-stat-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-      gap: 12px !important;
+      gap: 10px !important;
+      margin-bottom: 18px !important;
+    }
+
+    .qinbir-stat-card {
+      padding: 14px !important;
+      min-width: 0 !important;
+    }
+
+    .qinbir-stat-value {
+      font-size: 23px !important;
+    }
+
+    .qinbir-dashboard-secondary,
+    .qinbir-dashboard-four,
+    .qinbir-dashboard-capabilities,
+    .qinbir-action-grid,
+    .qinbir-generate-steps {
+      grid-template-columns: 1fr !important;
     }
 
     .qinbir-form-grid {
       grid-template-columns: 1fr !important;
     }
 
-    .qinbir-card {
-      padding: 16px !important;
-    }
-
-    .qinbir-page-title {
-      font-size: 24px !important;
-    }
-
     .qinbir-table-wrap {
+      width: 100% !important;
+      max-width: 100% !important;
       overflow-x: auto !important;
       -webkit-overflow-scrolling: touch;
     }
 
     .qinbir-table {
-      min-width: 700px;
+      min-width: 650px !important;
+    }
+
+    .qinbir-timetable-scroll {
+      width: 100% !important;
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .qinbir-timetable-inner {
+      min-width: 900px !important;
+    }
+
+    .qinbir-generate-card {
+      max-width: none !important;
+    }
+
+    .qinbir-generate-button {
+      width: 100% !important;
+    }
+
+    .qinbir-hero {
+      padding: 26px 20px !important;
+      border-radius: 16px !important;
+    }
+
+    .qinbir-hero h1 {
+      font-size: 31px !important;
+    }
+
+    .qinbir-hero p {
+      font-size: 14px !important;
+    }
+
+    .qinbir-hero-actions {
+      flex-direction: column !important;
+      align-items: stretch !important;
+    }
+
+    .qinbir-hero-actions a {
+      text-align: center !important;
     }
   }
 
   @media (max-width: 480px) {
-    .qinbir-main {
-      padding: 12px !important;
+    .qinbir-content {
+      padding: 10px !important;
+    }
+
+    .qinbir-topbar-sub {
+      display: none !important;
+    }
+
+    .qinbir-topbar-title {
+      font-size: 14px !important;
     }
 
     .qinbir-stat-grid {
@@ -130,10 +317,23 @@ const responsiveStyles = `
     }
 
     .qinbir-card {
-      padding: 12px !important;
+      padding: 13px !important;
+      border-radius: 11px !important;
     }
 
-    .qinbir-page-title {
+    .qinbir-hero {
+      padding: 22px 16px !important;
+    }
+
+    .qinbir-hero h1 {
+      font-size: 27px !important;
+    }
+
+    .qinbir-page-title h1 {
+      font-size: 21px !important;
+    }
+
+    .qinbir-stat-value {
       font-size: 21px !important;
     }
   }
@@ -453,6 +653,7 @@ const styles = {
 function PageTitle({ title, description, action }) {
   return (
     <div
+      className="qinbir-page-title"
       style={{
         display: "flex",
         justifyContent: "space-between",
@@ -486,7 +687,9 @@ function PageTitle({ title, description, action }) {
         )}
       </div>
 
-      {action}
+      {action && (
+        <div className="qinbir-page-title-action">{action}</div>
+      )}
     </div>
   );
 }
@@ -584,21 +787,22 @@ function Sidebar() {
   ];
 
   return (
-    <aside style={styles.sidebar}>
-      <div style={styles.brand}>
-        <div style={styles.brandName}>QINBIR</div>
-        <div style={styles.brandSubtitle}>
+    <aside className="qinbir-sidebar" style={styles.sidebar}>
+      <div className="qinbir-brand" style={styles.brand}>
+        <div className="qinbir-brand-name" style={styles.brandName}>QINBIR</div>
+        <div className="qinbir-brand-subtitle" style={styles.brandSubtitle}>
           Smart University Scheduling
         </div>
       </div>
 
-      <div style={styles.nav}>
+      <div className="qinbir-nav" style={styles.nav}>
         {menuSections.map((section) => (
-          <div key={section.title}>
-            <div style={styles.navSection}>{section.title}</div>
+          <div className="qinbir-nav-group" key={section.title}>
+            <div className="qinbir-nav-section" style={styles.navSection}>{section.title}</div>
 
             {section.items.map((item) => (
               <NavLink
+                className="qinbir-nav-link"
                 key={item.path}
                 to={item.path}
                 end={item.path === "/"}
@@ -624,7 +828,7 @@ function Sidebar() {
         ))}
       </div>
 
-      <div
+      <div className="qinbir-sidebar-info"
         style={{
           margin: "18px 14px",
           padding: "15px",
@@ -664,10 +868,10 @@ function Sidebar() {
 
 function TopBar() {
   return (
-    <header style={styles.topbar}>
+    <header className="qinbir-topbar" style={styles.topbar}>
       <div>
-        <div style={styles.topbarTitle}>QINBIR Smart Scheduler</div>
-        <div style={styles.topbarSub}>
+        <div className="qinbir-topbar-title" style={styles.topbarTitle}>QINBIR Smart Scheduler</div>
+        <div className="qinbir-topbar-sub" style={styles.topbarSub}>
           University Academic Scheduling Platform
         </div>
       </div>
@@ -679,7 +883,7 @@ function TopBar() {
           gap: "10px",
         }}
       >
-        <span style={styles.badge}>● System Online</span>
+        <span className="qinbir-badge" style={styles.badge}>● System Online</span>
 
         <div
           style={{
@@ -707,17 +911,24 @@ function TopBar() {
 
 function Layout({ children }) {
   return (
-    <div style={styles.app}>
-      <div style={styles.layout}>
+    <>
+      <style>{responsiveStyles}</style>
+
+      <div className="qinbir-layout" style={styles.layout}>
         <Sidebar />
 
-        <main style={styles.main}>
+        <main className="qinbir-main" style={styles.main}>
           <TopBar />
 
-          <div style={styles.content}>{children}</div>
+          <div
+            className="qinbir-content"
+            style={styles.content}
+          >
+            {children}
+          </div>
         </main>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -811,6 +1022,7 @@ function Dashboard() {
       {/* HERO */}
 
       <section
+        className="qinbir-hero"
         style={{
           borderRadius: "20px",
           padding: "42px",
@@ -905,6 +1117,7 @@ function Dashboard() {
           </p>
 
           <div
+            className="qinbir-hero-actions"
             style={{
               display: "flex",
               gap: "12px",
@@ -947,12 +1160,12 @@ function Dashboard() {
 
       {/* STATISTICS */}
 
-      <div style={styles.statGrid}>
+      <div className="qinbir-stat-grid" style={styles.statGrid}>
         {statItems.map((item) => (
-          <div key={item.label} style={styles.statCard}>
+          <div className="qinbir-stat-card" key={item.label} style={styles.statCard}>
             <div style={styles.statIcon}>{item.icon}</div>
 
-            <div style={styles.statValue}>
+            <div className="qinbir-stat-value" style={styles.statValue}>
               {loading ? "—" : item.value}
             </div>
 
@@ -964,6 +1177,7 @@ function Dashboard() {
       {/* SECONDARY STATS */}
 
       <div
+        className="qinbir-dashboard-secondary"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(3, 1fr)",
@@ -971,7 +1185,7 @@ function Dashboard() {
           marginBottom: "25px",
         }}
       >
-        <div style={styles.card}>
+        <div className="qinbir-card" style={styles.card}>
           <div style={{ color: "#6e7a91", fontSize: "12px" }}>
             Student Sections
           </div>
@@ -997,7 +1211,7 @@ function Dashboard() {
           </div>
         </div>
 
-        <div style={styles.card}>
+        <div className="qinbir-card" style={styles.card}>
           <div style={{ color: "#6e7a91", fontSize: "12px" }}>
             Course Requirements
           </div>
@@ -1023,7 +1237,7 @@ function Dashboard() {
           </div>
         </div>
 
-        <div style={styles.card}>
+        <div className="qinbir-card" style={styles.card}>
           <div style={{ color: "#6e7a91", fontSize: "12px" }}>
             Available Time Slots
           </div>
@@ -1063,6 +1277,7 @@ function Dashboard() {
         </div>
 
         <div
+          className="qinbir-dashboard-four"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(4, 1fr)",
@@ -1158,6 +1373,7 @@ function Dashboard() {
       {/* CAPABILITIES */}
 
       <div
+        className="qinbir-dashboard-capabilities"
         style={{
           display: "grid",
           gridTemplateColumns: "1.35fr 1fr",
@@ -1165,7 +1381,7 @@ function Dashboard() {
           marginBottom: "25px",
         }}
       >
-        <div style={styles.card}>
+        <div className="qinbir-card" style={styles.card}>
           <h2 style={styles.sectionTitle}>What QINBIR Considers</h2>
 
           <p style={styles.sectionSub}>
@@ -1174,6 +1390,7 @@ function Dashboard() {
           </p>
 
           <div
+            className="qinbir-action-grid"
             style={{
               display: "grid",
               gridTemplateColumns: "1fr 1fr",
@@ -1287,6 +1504,7 @@ function Dashboard() {
         </div>
 
         <div
+          className="qinbir-dashboard-four"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(4, 1fr)",
@@ -1434,11 +1652,11 @@ function Departments() {
       {message && <div style={styles.message}>{message}</div>}
       {error && <div style={styles.error}>{error}</div>}
 
-      <div style={styles.card}>
+      <div className="qinbir-card" style={styles.card}>
         <h2 style={styles.sectionTitle}>Add Department</h2>
 
         <form onSubmit={submit} style={{ marginTop: "18px" }}>
-          <div style={styles.formGrid}>
+          <div className="qinbir-form-grid" style={styles.formGrid}>
             <FormField label="Department Name">
               <input
                 style={styles.input}
@@ -1472,8 +1690,8 @@ function Departments() {
           </div>
         </form>
 
-        <div style={styles.tableWrap}>
-          <table style={styles.table}>
+        <div className="qinbir-table-wrap" style={styles.tableWrap}>
+          <table className="qinbir-table" style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>ID</th>
@@ -1569,11 +1787,11 @@ function Programs() {
       {message && <div style={styles.message}>{message}</div>}
       {error && <div style={styles.error}>{error}</div>}
 
-      <div style={styles.card}>
+      <div className="qinbir-card" style={styles.card}>
         <h2 style={styles.sectionTitle}>Add Program</h2>
 
         <form onSubmit={submit} style={{ marginTop: "18px" }}>
-          <div style={styles.formGrid}>
+          <div className="qinbir-form-grid" style={styles.formGrid}>
             <FormField label="Program Name">
               <input
                 style={styles.input}
@@ -1623,8 +1841,8 @@ function Programs() {
           </button>
         </form>
 
-        <div style={styles.tableWrap}>
-          <table style={styles.table}>
+        <div className="qinbir-table-wrap" style={styles.tableWrap}>
+          <table className="qinbir-table" style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>ID</th>
@@ -1828,7 +2046,7 @@ function Courses() {
         </p>
 
         <form onSubmit={handleAddCourse} style={{ marginTop: "20px" }}>
-          <div style={styles.formGrid}>
+          <div className="qinbir-form-grid" style={styles.formGrid}>
             <FormField label="Course Code">
               <input
                 style={styles.input}
@@ -1938,7 +2156,7 @@ function Courses() {
 
       {/* COURSE LIST */}
 
-      <div style={styles.card}>
+      <div className="qinbir-card" style={styles.card}>
         <div
           style={{
             display: "flex",
@@ -1958,8 +2176,8 @@ function Courses() {
         {loading ? (
           <Loading />
         ) : (
-          <div style={styles.tableWrap}>
-            <table style={styles.table}>
+          <div className="qinbir-table-wrap" style={styles.tableWrap}>
+            <table className="qinbir-table" style={styles.table}>
               <thead>
                 <tr>
                   <th style={styles.th}>ID</th>
@@ -2246,11 +2464,11 @@ function Lecturers() {
       {message && <div style={styles.message}>{message}</div>}
       {error && <div style={styles.error}>{error}</div>}
 
-      <div style={styles.card}>
+      <div className="qinbir-card" style={styles.card}>
         <h2 style={styles.sectionTitle}>Add Lecturer</h2>
 
         <form onSubmit={submit} style={{ marginTop: "18px" }}>
-          <div style={styles.formGrid}>
+          <div className="qinbir-form-grid" style={styles.formGrid}>
             <FormField label="User ID">
               <input
                 type="number"
@@ -2318,8 +2536,8 @@ function Lecturers() {
           </button>
         </form>
 
-        <div style={styles.tableWrap}>
-          <table style={styles.table}>
+        <div className="qinbir-table-wrap" style={styles.tableWrap}>
+          <table className="qinbir-table" style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>ID</th>
@@ -2427,11 +2645,11 @@ function StudentSections() {
       {message && <div style={styles.message}>{message}</div>}
       {error && <div style={styles.error}>{error}</div>}
 
-      <div style={styles.card}>
+      <div className="qinbir-card" style={styles.card}>
         <h2 style={styles.sectionTitle}>Add Student Section</h2>
 
         <form onSubmit={submit} style={{ marginTop: "18px" }}>
-          <div style={styles.formGrid}>
+          <div className="qinbir-form-grid" style={styles.formGrid}>
             <FormField label="Section Name">
               <input
                 style={styles.input}
@@ -2512,8 +2730,8 @@ function StudentSections() {
           </button>
         </form>
 
-        <div style={styles.tableWrap}>
-          <table style={styles.table}>
+        <div className="qinbir-table-wrap" style={styles.tableWrap}>
+          <table className="qinbir-table" style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>ID</th>
@@ -2616,11 +2834,11 @@ function Rooms() {
       {message && <div style={styles.message}>{message}</div>}
       {error && <div style={styles.error}>{error}</div>}
 
-      <div style={styles.card}>
+      <div className="qinbir-card" style={styles.card}>
         <h2 style={styles.sectionTitle}>Add Room</h2>
 
         <form onSubmit={submit} style={{ marginTop: "18px" }}>
-          <div style={styles.formGrid}>
+          <div className="qinbir-form-grid" style={styles.formGrid}>
             <FormField label="Room Name">
               <input
                 style={styles.input}
@@ -2684,8 +2902,8 @@ function Rooms() {
           </button>
         </form>
 
-        <div style={styles.tableWrap}>
-          <table style={styles.table}>
+        <div className="qinbir-table-wrap" style={styles.tableWrap}>
+          <table className="qinbir-table" style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>ID</th>
@@ -2773,11 +2991,11 @@ function TimeSlots() {
       {message && <div style={styles.message}>{message}</div>}
       {error && <div style={styles.error}>{error}</div>}
 
-      <div style={styles.card}>
+      <div className="qinbir-card" style={styles.card}>
         <h2 style={styles.sectionTitle}>Add Time Slot</h2>
 
         <form onSubmit={submit} style={{ marginTop: "18px" }}>
-          <div style={styles.formGrid}>
+          <div className="qinbir-form-grid" style={styles.formGrid}>
             <FormField label="Day">
               <select
                 style={styles.select}
@@ -2826,8 +3044,8 @@ function TimeSlots() {
           </button>
         </form>
 
-        <div style={styles.tableWrap}>
-          <table style={styles.table}>
+        <div className="qinbir-table-wrap" style={styles.tableWrap}>
+          <table className="qinbir-table" style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>ID</th>
@@ -2924,13 +3142,13 @@ function LecturerAvailability() {
       {message && <div style={styles.message}>{message}</div>}
       {error && <div style={styles.error}>{error}</div>}
 
-      <div style={styles.card}>
+      <div className="qinbir-card" style={styles.card}>
         <h2 style={styles.sectionTitle}>
           Add Availability Record
         </h2>
 
         <form onSubmit={submit} style={{ marginTop: "18px" }}>
-          <div style={styles.formGrid}>
+          <div className="qinbir-form-grid" style={styles.formGrid}>
             <FormField label="Lecturer">
               <select
                 style={styles.select}
@@ -2997,8 +3215,8 @@ function LecturerAvailability() {
           </button>
         </form>
 
-        <div style={styles.tableWrap}>
-          <table style={styles.table}>
+        <div className="qinbir-table-wrap" style={styles.tableWrap}>
+          <table className="qinbir-table" style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>ID</th>
@@ -3130,13 +3348,13 @@ function CourseRequirements() {
       {message && <div style={styles.message}>{message}</div>}
       {error && <div style={styles.error}>{error}</div>}
 
-      <div style={styles.card}>
+      <div className="qinbir-card" style={styles.card}>
         <h2 style={styles.sectionTitle}>
           Add Course Requirement
         </h2>
 
         <form onSubmit={submit} style={{ marginTop: "18px" }}>
-          <div style={styles.formGrid}>
+          <div className="qinbir-form-grid" style={styles.formGrid}>
             <FormField label="Course">
               <select
                 style={styles.select}
@@ -3245,8 +3463,8 @@ function CourseRequirements() {
           </button>
         </form>
 
-        <div style={styles.tableWrap}>
-          <table style={styles.table}>
+        <div className="qinbir-table-wrap" style={styles.tableWrap}>
+          <table className="qinbir-table" style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>ID</th>
@@ -3363,11 +3581,11 @@ function Constraints() {
       {message && <div style={styles.message}>{message}</div>}
       {error && <div style={styles.error}>{error}</div>}
 
-      <div style={styles.card}>
+      <div className="qinbir-card" style={styles.card}>
         <h2 style={styles.sectionTitle}>Add Constraint</h2>
 
         <form onSubmit={submit} style={{ marginTop: "18px" }}>
-          <div style={styles.formGrid}>
+          <div className="qinbir-form-grid" style={styles.formGrid}>
             <FormField label="Constraint Name">
               <input
                 style={styles.input}
@@ -3444,8 +3662,8 @@ function Constraints() {
           </button>
         </form>
 
-        <div style={styles.tableWrap}>
-          <table style={styles.table}>
+        <div className="qinbir-table-wrap" style={styles.tableWrap}>
+          <table className="qinbir-table" style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>ID</th>
@@ -3527,6 +3745,7 @@ function GenerateSchedule() {
       {error && <div style={styles.error}>{error}</div>}
 
       <div
+        className="qinbir-card qinbir-generate-card"
         style={{
           ...styles.card,
           maxWidth: "900px",
@@ -3567,6 +3786,7 @@ function GenerateSchedule() {
         </p>
 
         <div
+          className="qinbir-generate-steps"
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(3, 1fr)",
@@ -3611,6 +3831,7 @@ function GenerateSchedule() {
         </div>
 
         <button
+          className="qinbir-generate-button"
           onClick={generate}
           disabled={loading}
           style={{
@@ -3773,7 +3994,7 @@ function Timetable() {
           SCHEDULE SELECTOR
       ===================================================== */}
 
-      <div style={styles.card}>
+      <div className="qinbir-card" style={styles.card}>
         <FormField label="Schedule">
           <select
             style={{
@@ -3836,6 +4057,7 @@ function Timetable() {
               }}
             >
               <div
+                className="qinbir-timetable-inner"
                 style={{
                   minWidth: "900px",
                   background: "#ffffff",
@@ -4048,8 +4270,8 @@ function Timetable() {
               </span>
             </div>
 
-            <div style={styles.tableWrap}>
-              <table style={styles.table}>
+            <div className="qinbir-table-wrap" style={styles.tableWrap}>
+              <table className="qinbir-table" style={styles.table}>
                 <thead>
                   <tr>
                     <th style={styles.th}>
