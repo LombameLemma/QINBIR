@@ -5,7 +5,6 @@ from pydantic import BaseModel
 from app.database import get_db
 from app.models.constraint import Constraint
 
-
 router = APIRouter(
     prefix="/constraints",
     tags=["Constraints"]
