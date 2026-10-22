@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BrowserRouter,
   Routes,
@@ -41,6 +41,141 @@ async function apiRequest(endpoint, options = {}) {
   return data;
 }
 
+function TinyActionButton({ kind, onClick, label }) {
+  const isDelete = kind === "delete";
+  return (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      onClick={onClick}
+      style={{
+        width: 28,
+        height: 28,
+        padding: 0,
+        marginRight: 5,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        border: `1px solid ${isDelete ? "#f0caca" : "#d5deea"}`,
+        borderRadius: 6,
+        background: isDelete ? "#fff5f5" : "#f5f8fc",
+        color: isDelete ? "#b42318" : "#344054",
+        cursor: "pointer",
+      }}
+    >
+      {isDelete ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="m19 6-1 14H6L5 6" /><path d="M10 11v5M14 11v5" />
+        </svg>
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+
+
+/* ============================================================
+   IN-APP DIALOGS (no browser alert/prompt/confirm popups)
+============================================================ */
+let qinbirDialogOpener = null;
+
+function showQinbirDialog(config) {
+  return new Promise((resolve) => {
+    if (!qinbirDialogOpener) {
+      resolve(null);
+      return;
+    }
+    qinbirDialogOpener(config, resolve);
+  });
+}
+
+function QinbirDialogHost() {
+  const [dialog, setDialog] = useState(null);
+  const [values, setValues] = useState({});
+  const resolverRef = useRef(null);
+
+  useEffect(() => {
+    qinbirDialogOpener = (config, resolve) => {
+      resolverRef.current = resolve;
+      setValues(Object.fromEntries((config.fields || []).map((field) => [field.name, field.value ?? ""])));
+      setDialog(config);
+    };
+    return () => { qinbirDialogOpener = null; };
+  }, []);
+
+  function close(result) {
+    const resolve = resolverRef.current;
+    resolverRef.current = null;
+    setDialog(null);
+    if (resolve) resolve(result);
+  }
+
+  if (!dialog) return null;
+  const isConfirm = dialog.type === "confirm";
+
+  return (
+    <div
+      role="presentation"
+      onMouseDown={(event) => { if (event.target === event.currentTarget) close(isConfirm ? false : null); }}
+      style={{ position: "fixed", inset: 0, zIndex: 10000, background: "rgba(16,24,40,.48)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+    >
+      <div role="dialog" aria-modal="true" aria-labelledby="qinbir-dialog-title" style={{ width: "100%", maxWidth: isConfirm ? 420 : 560, maxHeight: "90vh", overflowY: "auto", background: "#fff", borderRadius: 14, boxShadow: "0 24px 70px rgba(16,24,40,.25)", padding: 24 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, marginBottom: 8 }}>
+          <div>
+            <h2 id="qinbir-dialog-title" style={{ margin: 0, color: "#101828", fontSize: 19, fontWeight: 700 }}>{dialog.title || (isConfirm ? "Confirm action" : "Edit record")}</h2>
+            {dialog.description && <p style={{ margin: "8px 0 0", color: "#667085", fontSize: 13, lineHeight: 1.5 }}>{dialog.description}</p>}
+          </div>
+          <button type="button" onClick={() => close(isConfirm ? false : null)} aria-label="Close dialog" style={{ border: 0, background: "transparent", color: "#667085", fontSize: 24, cursor: "pointer", lineHeight: 1 }}>×</button>
+        </div>
+
+        {isConfirm ? (
+          <>
+            <p style={{ color: "#344054", fontSize: 14, lineHeight: 1.6, margin: "18px 0 24px" }}>{dialog.message}</p>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+              <button type="button" onClick={() => close(false)} style={dialogButtonStyle}>Cancel</button>
+              <button type="button" onClick={() => close(true)} style={{ ...dialogButtonStyle, background: "#b42318", borderColor: "#b42318", color: "#fff" }}>Delete</button>
+            </div>
+          </>
+        ) : (
+          <form onSubmit={(event) => { event.preventDefault(); close(values); }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 14, marginTop: 20 }}>
+              {(dialog.fields || []).map((field) => (
+                <label key={field.name} style={{ display: "flex", flexDirection: "column", gap: 6, color: "#344054", fontSize: 13, fontWeight: 600, gridColumn: field.fullWidth ? "1 / -1" : undefined }}>
+                  {field.label}
+                  {field.type === "select" ? (
+                    <select required={field.required !== false} value={values[field.name] ?? ""} onChange={(event) => setValues((old) => ({ ...old, [field.name]: event.target.value }))} style={dialogInputStyle}>
+                      {(field.options || []).map((option) => <option key={String(option.value)} value={option.value}>{option.label}</option>)}
+                    </select>
+                  ) : field.type === "textarea" ? (
+                    <textarea required={field.required === true} rows={3} value={values[field.name] ?? ""} onChange={(event) => setValues((old) => ({ ...old, [field.name]: event.target.value }))} style={{ ...dialogInputStyle, resize: "vertical" }} />
+                  ) : field.type === "checkbox" ? (
+                    <span style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 40 }}><input type="checkbox" checked={Boolean(values[field.name])} onChange={(event) => setValues((old) => ({ ...old, [field.name]: event.target.checked }))} /> <span style={{ fontWeight: 400 }}>{field.checkboxLabel || "Enabled"}</span></span>
+                  ) : (
+                    <input required={field.required !== false} type={field.type || "text"} min={field.min} max={field.max} step={field.step} value={values[field.name] ?? ""} onChange={(event) => setValues((old) => ({ ...old, [field.name]: event.target.value }))} style={dialogInputStyle} />
+                  )}
+                </label>
+              ))}
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 24 }}>
+              <button type="button" onClick={() => close(null)} style={dialogButtonStyle}>Cancel</button>
+              <button type="submit" style={{ ...dialogButtonStyle, background: "#2457a7", borderColor: "#2457a7", color: "#fff" }}>{dialog.submitLabel || "Save changes"}</button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const dialogInputStyle = { width: "100%", minHeight: 40, padding: "9px 11px", border: "1px solid #d0d5dd", borderRadius: 8, background: "#fff", color: "#101828", fontSize: 14, outlineColor: "#2457a7" };
+const dialogButtonStyle = { minHeight: 38, padding: "8px 15px", border: "1px solid #d0d5dd", borderRadius: 8, background: "#fff", color: "#344054", fontSize: 13, fontWeight: 600, cursor: "pointer" };
+
+
 /* ============================================================
    GLOBAL STYLES
 ============================================================ */
@@ -64,6 +199,14 @@ const responsiveStyles = `
   .qinbir-mobile-timetable { display: none; }
   .qinbir-desktop-entry-table { display: block; }
   .qinbir-mobile-entry-cards { display: none; }
+
+  .qinbir-management-table {
+    font-size: 12px;
+  }
+  .qinbir-management-table th, .qinbir-management-table td {
+    white-space: nowrap;
+    padding: 8px 10px;
+  }
 
   .qinbir-mobile-menu-button,
   .qinbir-mobile-close,
@@ -1925,16 +2068,25 @@ function Dashboard() {
    DEPARTMENTS
 ============================================================ */
 
+
 function Departments() {
   const [items, setItems] = useState([]);
+
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
+
+  const [editingDepartmentId, setEditingDepartmentId] = useState(null);
+
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  // READ: Load departments
   async function load() {
     try {
-      setItems(await apiRequest("/departments/"));
+      const data = await apiRequest("/departments/");
+      setItems(Array.isArray(data) ? data : []);
+      setError("");
     } catch (err) {
       setError(err.message);
     }
@@ -1944,24 +2096,95 @@ function Departments() {
     load();
   }, []);
 
+  // Clear the form
+  function resetForm() {
+    setName("");
+    setCode("");
+    setEditingDepartmentId(null);
+  }
+
+  // Prepare a department for editing
+  function startEdit(department) {
+    setEditingDepartmentId(department.id);
+    setName(department.name || "");
+    setCode(department.code || "");
+
+    setMessage("");
+    setError("");
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // CREATE and UPDATE
   async function submit(e) {
     e.preventDefault();
+
+    setMessage("");
+    setError("");
+
+    const departmentName = name.trim();
+    const departmentCode = code.trim().toUpperCase();
+
+    if (!departmentName || !departmentCode) {
+      setError("Department name and code are required.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      if (editingDepartmentId !== null) {
+        await apiRequest(`/departments/${editingDepartmentId}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            name: departmentName,
+            code: departmentCode,
+          }),
+        });
+
+        setMessage("Department updated successfully.");
+      } else {
+        await apiRequest("/departments/", {
+          method: "POST",
+          body: JSON.stringify({
+            name: departmentName,
+            code: departmentCode,
+          }),
+        });
+
+        setMessage("Department created successfully.");
+      }
+
+      resetForm();
+      await load();
+    } catch (err) {
+      setError(err.message);
+      setMessage("");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // DELETE
+  async function deleteDepartment(department) {
+    const confirmed = await showQinbirDialog({ type: "confirm", title: "Delete department?", message: `Are you sure you want to delete "${department.name}" (${department.code})? This action cannot be undone.` });
+
+    if (!confirmed) return;
+
     setMessage("");
     setError("");
 
     try {
-      await apiRequest("/departments/", {
-        method: "POST",
-        body: JSON.stringify({
-          name: name.trim(),
-          code: code.trim().toUpperCase(),
-        }),
+      await apiRequest(`/departments/${department.id}`, {
+        method: "DELETE",
       });
 
-      setName("");
-      setCode("");
-      setMessage("Department created successfully.");
-      load();
+      if (editingDepartmentId === department.id) {
+        resetForm();
+      }
+
+      setMessage("Department deleted successfully.");
+      await load();
     } catch (err) {
       setError(err.message);
     }
@@ -1971,14 +2194,18 @@ function Departments() {
     <div>
       <PageTitle
         title="Departments"
-        description="Manage the university's academic departments."
+        description="Manage university departments."
       />
 
       {message && <div style={styles.message}>{message}</div>}
       {error && <div style={styles.error}>{error}</div>}
 
       <div className="qinbir-card" style={styles.card}>
-        <h2 style={styles.sectionTitle}>Add Department</h2>
+        <h2 style={styles.sectionTitle}>
+          {editingDepartmentId !== null
+            ? "Edit Department"
+            : "Add Department"}
+        </h2>
 
         <form onSubmit={submit} style={{ marginTop: "18px" }}>
           <div className="qinbir-form-grid" style={styles.formGrid}>
@@ -2001,44 +2228,86 @@ function Departments() {
                 required
               />
             </FormField>
+          </div>
 
-            <div style={{ display: "flex", alignItems: "end" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              flexWrap: "wrap",
+              marginTop: "16px",
+              
+            }}
+          >
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                ...styles.button,
+                ...styles.primaryButton,
+                opacity: loading ? 0.7 : 1,
+              }}
+            >
+              {loading
+                ? "Saving..."
+                : editingDepartmentId !== null
+                  ? "Update Department"
+                  : "Add Department"}
+            </button>
+
+            {editingDepartmentId !== null && (
               <button
-                style={{
-                  ...styles.button,
-                  ...styles.primaryButton,
-                }}
+                type="button"
+                onClick={resetForm}
+                style={styles.button}
               >
-                Add Department
+                Cancel
               </button>
-            </div>
+            )}
           </div>
         </form>
 
         <div className="qinbir-table-wrap" style={styles.tableWrap}>
-          <table className="qinbir-table" style={styles.table}>
+          <table className="qinbir-table qinbir-management-table" style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>ID</th>
                 <th style={styles.th}>Code</th>
                 <th style={styles.th}>Name</th>
+                <th style={styles.th}>Actions</th>
               </tr>
             </thead>
 
             <tbody>
-              {items.map((item) => (
-                <tr key={item.id}>
-                  <td style={styles.td}>{item.id}</td>
-                  <td style={styles.td}>
-                    <span style={styles.badge}>{item.code}</span>
+              {items.length === 0 ? (
+                <tr>
+                  <td style={styles.td} colSpan={4}>
+                    No departments found.
                   </td>
-                  <td style={styles.td}>{item.name}</td>
                 </tr>
-              ))}
+              ) : (
+                items.map((department) => (
+                  <tr key={department.id}>
+                    <td style={styles.td}>{department.id}</td>
+                    <td style={styles.td}>{department.code}</td>
+                    <td style={styles.td}>{department.name}</td>
+                    <td style={styles.td}>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "8px",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <TinyActionButton kind="edit" label="Edit department" onClick={() => startEdit(department)} />
+                        <TinyActionButton kind="delete" label="Delete department" onClick={() => deleteDepartment(department)} />
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
-
-          {!items.length && <EmptyState text="No departments found." />}
         </div>
       </div>
     </div>
@@ -2052,13 +2321,18 @@ function Departments() {
 function Programs() {
   const [items, setItems] = useState([]);
   const [departments, setDepartments] = useState([]);
+
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [departmentId, setDepartmentId] = useState("");
 
+  const [editingProgramId, setEditingProgramId] = useState(null);
+
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
+  // READ: Load programs and departments
   async function load() {
     try {
       const [programData, departmentData] = await Promise.all([
@@ -2066,8 +2340,10 @@ function Programs() {
         apiRequest("/departments/"),
       ]);
 
-      setItems(programData);
-      setDepartments(departmentData);
+      setItems(Array.isArray(programData) ? programData : []);
+      setDepartments(
+        Array.isArray(departmentData) ? departmentData : []
+      );
     } catch (err) {
       setError(err.message);
     }
@@ -2077,28 +2353,99 @@ function Programs() {
     load();
   }, []);
 
+  // Reset the form
+  function resetForm() {
+    setName("");
+    setCode("");
+    setDepartmentId("");
+    setEditingProgramId(null);
+  }
+
+  // Prepare a program for editing
+  function startEdit(program) {
+    setEditingProgramId(program.id);
+    setName(program.name || "");
+    setCode(program.code || "");
+    setDepartmentId(String(program.department_id ?? ""));
+
+    setMessage("");
+    setError("");
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // CREATE and UPDATE
   async function submit(e) {
     e.preventDefault();
 
-    try {
-      await apiRequest("/programs/", {
-        method: "POST",
-        body: JSON.stringify({
-          name: name.trim(),
-          code: code.trim().toUpperCase(),
-          department_id: Number(departmentId),
-        }),
-      });
+    setMessage("");
+    setError("");
 
-      setName("");
-      setCode("");
-      setDepartmentId("");
-      setMessage("Program created successfully.");
-      setError("");
-      load();
+    const programName = name.trim();
+    const programCode = code.trim().toUpperCase();
+
+    if (!programName || !programCode || !departmentId) {
+      setError("Please complete all fields.");
+      return;
+    }
+
+    setLoading(true);
+
+    const programData = {
+      name: programName,
+      code: programCode,
+      department_id: Number(departmentId),
+    };
+
+    try {
+      if (editingProgramId !== null) {
+        await apiRequest(`/programs/${editingProgramId}`, {
+          method: "PUT",
+          body: JSON.stringify(programData),
+        });
+
+        setMessage("Program updated successfully.");
+      } else {
+        await apiRequest("/programs/", {
+          method: "POST",
+          body: JSON.stringify(programData),
+        });
+
+        setMessage("Program created successfully.");
+      }
+
+      resetForm();
+      await load();
     } catch (err) {
       setError(err.message);
       setMessage("");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // DELETE
+  async function deleteProgram(program) {
+    const confirmed = await showQinbirDialog({ type: "confirm", title: "Delete program?", message: `Are you sure you want to delete "${program.name}" (${program.code})? This action cannot be undone.` });
+
+    if (!confirmed) return;
+
+    setMessage("");
+    setError("");
+
+    try {
+      await apiRequest(`/programs/${program.id}`, {
+        method: "DELETE",
+      });
+
+      if (editingProgramId === program.id) {
+        resetForm();
+      }
+
+      setMessage("Program deleted successfully.");
+      await load();
+    } catch (err) {
+      setError(err.message);
     }
   }
 
@@ -2113,7 +2460,9 @@ function Programs() {
       {error && <div style={styles.error}>{error}</div>}
 
       <div className="qinbir-card" style={styles.card}>
-        <h2 style={styles.sectionTitle}>Add Program</h2>
+        <h2 style={styles.sectionTitle}>
+          {editingProgramId !== null ? "Edit Program" : "Add Program"}
+        </h2>
 
         <form onSubmit={submit} style={{ marginTop: "18px" }}>
           <div className="qinbir-form-grid" style={styles.formGrid}>
@@ -2122,7 +2471,7 @@ function Programs() {
                 style={styles.input}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Software Engineering"
+                placeholder="Computer Science"
                 required
               />
             </FormField>
@@ -2132,7 +2481,7 @@ function Programs() {
                 style={styles.input}
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                placeholder="SE"
+                placeholder="CS"
                 required
               />
             </FormField>
@@ -2144,59 +2493,118 @@ function Programs() {
                 onChange={(e) => setDepartmentId(e.target.value)}
                 required
               >
-                <option value="">Select department</option>
+                <option value="">Select a department</option>
 
                 {departments.map((department) => (
-                  <option key={department.id} value={department.id}>
-                    {department.code} — {department.name}
+                  <option
+                    key={department.id}
+                    value={department.id}
+                  >
+                    {department.code
+                      ? `${department.code} — ${department.name}`
+                      : department.name}
                   </option>
                 ))}
               </select>
             </FormField>
           </div>
 
-          <button
+          {departments.length === 0 && (
+            <p style={{ marginTop: "12px" }}>
+              No departments are available. Add a department first.
+            </p>
+          )}
+
+          <div
             style={{
-              ...styles.button,
-              ...styles.primaryButton,
+              display: "flex",
+              gap: "10px",
+              flexWrap: "wrap",
               marginTop: "16px",
             }}
           >
-            Add Program
-          </button>
+            <button
+              type="submit"
+              disabled={loading || departments.length === 0}
+              style={{
+                ...styles.button,
+                ...styles.primaryButton,
+                opacity:
+                  loading || departments.length === 0 ? 0.7 : 1,
+              }}
+            >
+              {loading
+                ? "Saving..."
+                : editingProgramId !== null
+                  ? "Update Program"
+                  : "Add Program"}
+            </button>
+
+            {editingProgramId !== null && (
+              <button
+                type="button"
+                onClick={resetForm}
+                style={styles.button}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
 
         <div className="qinbir-table-wrap" style={styles.tableWrap}>
-          <table className="qinbir-table" style={styles.table}>
+          <table className="qinbir-table qinbir-management-table" style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>ID</th>
                 <th style={styles.th}>Code</th>
-                <th style={styles.th}>Program</th>
+                <th style={styles.th}>Program Name</th>
                 <th style={styles.th}>Department</th>
+                <th style={styles.th}>Actions</th>
               </tr>
             </thead>
 
             <tbody>
-              {items.map((item) => (
-                <tr key={item.id}>
-                  <td style={styles.td}>{item.id}</td>
-                  <td style={styles.td}>
-                    <span style={styles.badge}>{item.code}</span>
-                  </td>
-                  <td style={styles.td}>{item.name}</td>
-                  <td style={styles.td}>
-                    {item.department_name ||
-                      item.department_code ||
-                      item.department_id ||
-                      "—"}
+              {items.length === 0 ? (
+                <tr>
+                  <td style={styles.td} colSpan={5}>
+                    No programs found.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                items.map((program) => {
+                  const department = departments.find(
+                    (item) => item.id === program.department_id
+                  );
+
+                  return (
+                    <tr key={program.id}>
+                      <td style={styles.td}>{program.id}</td>
+                      <td style={styles.td}>{program.code}</td>
+                      <td style={styles.td}>{program.name}</td>
+                      <td style={styles.td}>
+                        {department
+                          ? `${department.code} — ${department.name}`
+                          : `Department ID: ${program.department_id}`}
+                      </td>
+                      <td style={styles.td}>
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "8px",
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <TinyActionButton kind="edit" label="Edit program" onClick={() => startEdit(program)} />
+                          <TinyActionButton kind="delete" label="Delete program" onClick={() => deleteProgram(program)} />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
-
-          {!items.length && <EmptyState text="No programs found." />}
         </div>
       </div>
     </div>
@@ -2333,6 +2741,14 @@ function Courses() {
     } catch (err) {
       setError(err.message);
     }
+  }
+
+  async function deleteCourse(course) {
+    const confirmed = await showQinbirDialog({ type: "confirm", title: "Delete course?", message: `Delete course "${course.code} — ${course.name}"? This may fail if the course is used by requirements.` });
+    if (!confirmed) return;
+    setMessage(""); setError("");
+    try { await apiRequest(`/courses/${course.id}`, { method: "DELETE" }); setMessage("Course deleted successfully."); await loadData(); }
+    catch (err) { setError(err.message); }
   }
 
   function creditPattern(value) {
@@ -2502,7 +2918,7 @@ function Courses() {
           <Loading />
         ) : (
           <div className="qinbir-table-wrap" style={styles.tableWrap}>
-            <table className="qinbir-table" style={styles.table}>
+            <table className="qinbir-table qinbir-management-table" style={styles.table}>
               <thead>
                 <tr>
                   <th style={styles.th}>ID</th>
@@ -2699,6 +3115,7 @@ function Courses() {
                         >
                           Edit
                         </button>
+                        <TinyActionButton kind="delete" label="Delete course" onClick={() => deleteCourse(course)} />
                       </td>
                     </tr>
                   );
@@ -2777,6 +3194,31 @@ function Lecturers() {
       setError(err.message);
       setMessage("");
     }
+  }
+
+  async function editItem(item) {
+    const values = await showQinbirDialog({
+      title: "Edit lecturer",
+      description: "Update the lecturer details, then save your changes.",
+      fields: [
+        { name: "user_id", label: "User ID", type: "number", min: 1, value: item.user_id },
+        { name: "employee_id", label: "Employee ID", value: item.employee_id || "" },
+        { name: "name", label: "Lecturer name", value: item.name || "" },
+        { name: "department_id", label: "Department ID", type: "number", min: 1, value: item.department_id },
+      ],
+    });
+    if (!values) return;
+    try {
+      await apiRequest(`/lecturers/${item.id}`, { method: "PUT", body: JSON.stringify({ user_id: Number(values.user_id), employee_id: values.employee_id.trim(), name: values.name.trim(), department_id: Number(values.department_id) }) });
+      setMessage("Lecturer updated successfully."); setError(""); await load();
+    } catch (err) { setError(err.message); }
+  }
+
+  async function deleteItem(item) {
+    const confirmed = await showQinbirDialog({ type: "confirm", title: "Delete lecturer?", message: `Delete lecturer "${item.name}" (${item.employee_id})? This action cannot be undone.` });
+    if (!confirmed) return;
+    try { await apiRequest(`/lecturers/${item.id}`, { method: "DELETE" }); setMessage("Lecturer deleted successfully."); setError(""); await load(); }
+    catch (err) { setError(err.message); }
   }
 
   return (
@@ -2862,13 +3304,14 @@ function Lecturers() {
         </form>
 
         <div className="qinbir-table-wrap" style={styles.tableWrap}>
-          <table className="qinbir-table" style={styles.table}>
+          <table className="qinbir-table qinbir-management-table" style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>ID</th>
                 <th style={styles.th}>Employee ID</th>
                 <th style={styles.th}>Name</th>
                 <th style={styles.th}>Department</th>
+                <th style={styles.th}>Actions</th>
               </tr>
             </thead>
 
@@ -2883,6 +3326,10 @@ function Lecturers() {
                       item.department_code ||
                       item.department_id ||
                       "—"}
+                  </td>
+                  <td style={styles.td}>
+                    <TinyActionButton kind="edit" label="Edit lecturer" onClick={() => editItem(item)} />
+                    <TinyActionButton kind="delete" label="Delete lecturer" onClick={() => deleteItem(item)} />
                   </td>
                 </tr>
               ))}
@@ -2958,6 +3405,29 @@ function StudentSections() {
       setError(err.message);
       setMessage("");
     }
+  }
+
+  async function editItem(item) {
+    const values = await showQinbirDialog({
+      title: "Edit student section",
+      description: "Update the section information.",
+      fields: [
+        { name: "name", label: "Section name", value: item.name || "" },
+        { name: "program_id", label: "Program ID", type: "number", min: 1, value: item.program_id },
+        { name: "year", label: "Year", type: "number", min: 1, max: 4, value: item.year },
+        { name: "semester", label: "Semester", type: "number", min: 1, max: 2, value: item.semester },
+        { name: "student_count", label: "Student count", type: "number", min: 0, value: item.student_count },
+      ],
+    });
+    if (!values) return;
+    try { await apiRequest(`/student-sections/${item.id}`, { method: "PUT", body: JSON.stringify({ name: values.name.trim(), program_id: Number(values.program_id), year: Number(values.year), semester: Number(values.semester), student_count: Number(values.student_count) }) }); setMessage("Student section updated successfully."); setError(""); await load(); }
+    catch (err) { setError(err.message); }
+  }
+  async function deleteItem(item) {
+    const confirmed = await showQinbirDialog({ type: "confirm", title: "Delete student section?", message: `Delete student section "${item.name}"? This action cannot be undone.` });
+    if (!confirmed) return;
+    try { await apiRequest(`/student-sections/${item.id}`, { method: "DELETE" }); setMessage("Student section deleted successfully."); setError(""); await load(); }
+    catch (err) { setError(err.message); }
   }
 
   return (
@@ -3056,7 +3526,7 @@ function StudentSections() {
         </form>
 
         <div className="qinbir-table-wrap" style={styles.tableWrap}>
-          <table className="qinbir-table" style={styles.table}>
+          <table className="qinbir-table qinbir-management-table" style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>ID</th>
@@ -3065,6 +3535,7 @@ function StudentSections() {
                 <th style={styles.th}>Year</th>
                 <th style={styles.th}>Semester</th>
                 <th style={styles.th}>Students</th>
+                <th style={styles.th}>Actions</th>
               </tr>
             </thead>
 
@@ -3080,8 +3551,10 @@ function StudentSections() {
                   </td>
                   <td style={styles.td}>{item.year}</td>
                   <td style={styles.td}>{item.semester}</td>
+                  <td style={styles.td}>{item.student_count}</td>
                   <td style={styles.td}>
-                    {item.student_count}
+                    <TinyActionButton kind="edit" label="Edit section" onClick={() => editItem(item)} />
+                    <TinyActionButton kind="delete" label="Delete section" onClick={() => deleteItem(item)} />
                   </td>
                 </tr>
               ))}
@@ -3105,12 +3578,16 @@ function Rooms() {
   const [capacity, setCapacity] = useState("");
   const [roomType, setRoomType] = useState("Classroom");
 
+  const [editingRoomId, setEditingRoomId] = useState(null);
+
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function load() {
     try {
-      setItems(await apiRequest("/rooms/"));
+      const data = await apiRequest("/rooms/");
+      setItems(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message);
     }
@@ -3120,32 +3597,93 @@ function Rooms() {
     load();
   }, []);
 
+  function resetForm() {
+    setName("");
+    setBuilding("");
+    setCapacity("");
+    setRoomType("Classroom");
+    setEditingRoomId(null);
+  }
+
+  function startEdit(room) {
+    setEditingRoomId(room.id);
+    setName(room.name || "");
+    setBuilding(room.building || "");
+    setCapacity(String(room.capacity ?? ""));
+    setRoomType(room.room_type || "Classroom");
+
+    setMessage("");
+    setError("");
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   async function submit(e) {
     e.preventDefault();
 
+    setMessage("");
+    setError("");
+    setLoading(true);
+
+    const roomData = {
+      name: name.trim(),
+      building: building.trim(),
+      capacity: Number(capacity),
+      room_type: roomType,
+    };
+
     try {
-      await apiRequest("/rooms/", {
-        method: "POST",
-        body: JSON.stringify({
-          name: name.trim(),
-          building: building.trim(),
-          capacity: Number(capacity),
-          room_type: roomType.trim(),
-        }),
+      if (editingRoomId !== null) {
+        await apiRequest(`/rooms/${editingRoomId}`, {
+          method: "PUT",
+          body: JSON.stringify(roomData),
+        });
+
+        setMessage("Room updated successfully.");
+      } else {
+        await apiRequest("/rooms/", {
+          method: "POST",
+          body: JSON.stringify(roomData),
+        });
+
+        setMessage("Room created successfully.");
+      }
+
+      resetForm();
+      await load();
+    } catch (err) {
+      setError(
+        typeof err.message === "string"
+          ? err.message
+          : "Unable to save the room."
+      );
+      setMessage("");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function deleteRoom(room) {
+    const confirmed = await showQinbirDialog({ type: "confirm", title: "Delete room?", message: `Are you sure you want to delete "${room.name}"? This action cannot be undone.` });
+
+    if (!confirmed) return;
+
+    setMessage("");
+    setError("");
+
+    try {
+      await apiRequest(`/rooms/${room.id}`, {
+        method: "DELETE",
       });
 
-      setName("");
-      setBuilding("");
-      setCapacity("");
-      setRoomType("Classroom");
+      if (editingRoomId === room.id) {
+        resetForm();
+      }
 
-      setMessage("Room created successfully.");
-      setError("");
-
-      load();
+      setMessage("Room deleted successfully.");
+      await load();
     } catch (err) {
       setError(err.message);
-      setMessage("");
     }
   }
 
@@ -3160,7 +3698,9 @@ function Rooms() {
       {error && <div style={styles.error}>{error}</div>}
 
       <div className="qinbir-card" style={styles.card}>
-        <h2 style={styles.sectionTitle}>Add Room</h2>
+        <h2 style={styles.sectionTitle}>
+          {editingRoomId !== null ? "Edit Room" : "Add Room"}
+        </h2>
 
         <form onSubmit={submit} style={{ marginTop: "18px" }}>
           <div className="qinbir-form-grid" style={styles.formGrid}>
@@ -3178,9 +3718,7 @@ function Rooms() {
               <input
                 style={styles.input}
                 value={building}
-                onChange={(e) =>
-                  setBuilding(e.target.value)
-                }
+                onChange={(e) => setBuilding(e.target.value)}
                 placeholder="Main Building"
                 required
               />
@@ -3192,9 +3730,7 @@ function Rooms() {
                 min="1"
                 style={styles.input}
                 value={capacity}
-                onChange={(e) =>
-                  setCapacity(e.target.value)
-                }
+                onChange={(e) => setCapacity(e.target.value)}
                 required
               />
             </FormField>
@@ -3203,9 +3739,7 @@ function Rooms() {
               <select
                 style={styles.select}
                 value={roomType}
-                onChange={(e) =>
-                  setRoomType(e.target.value)
-                }
+                onChange={(e) => setRoomType(e.target.value)}
               >
                 <option>Classroom</option>
                 <option>Laboratory</option>
@@ -3216,19 +3750,44 @@ function Rooms() {
             </FormField>
           </div>
 
-          <button
+          <div
             style={{
-              ...styles.button,
-              ...styles.primaryButton,
+              display: "flex",
+              gap: "10px",
+              flexWrap: "wrap",
               marginTop: "16px",
             }}
           >
-            Add Room
-          </button>
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                ...styles.button,
+                ...styles.primaryButton,
+                opacity: loading ? 0.7 : 1,
+              }}
+            >
+              {loading
+                ? "Saving..."
+                : editingRoomId !== null
+                  ? "Update Room"
+                  : "Add Room"}
+            </button>
+
+            {editingRoomId !== null && (
+              <button
+                type="button"
+                onClick={resetForm}
+                style={styles.button}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
 
         <div className="qinbir-table-wrap" style={styles.tableWrap}>
-          <table className="qinbir-table" style={styles.table}>
+          <table className="qinbir-table qinbir-management-table" style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>ID</th>
@@ -3236,19 +3795,43 @@ function Rooms() {
                 <th style={styles.th}>Building</th>
                 <th style={styles.th}>Capacity</th>
                 <th style={styles.th}>Type</th>
+                <th style={styles.th}>Actions</th>
               </tr>
             </thead>
 
             <tbody>
-              {items.map((item) => (
-                <tr key={item.id}>
-                  <td style={styles.td}>{item.id}</td>
-                  <td style={styles.td}>{item.name}</td>
-                  <td style={styles.td}>{item.building}</td>
-                  <td style={styles.td}>{item.capacity}</td>
-                  <td style={styles.td}>{item.room_type}</td>
+              {items.length === 0 ? (
+                <tr>
+                  <td
+                    style={styles.td}
+                    colSpan={6}
+                  >
+                    No rooms found. Add a room using the form above.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                items.map((item) => (
+                  <tr key={item.id}>
+                    <td style={styles.td}>{item.id}</td>
+                    <td style={styles.td}>{item.name}</td>
+                    <td style={styles.td}>{item.building}</td>
+                    <td style={styles.td}>{item.capacity}</td>
+                    <td style={styles.td}>{item.room_type}</td>
+                    <td style={styles.td}>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "8px",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <TinyActionButton kind="edit" label="Edit room" onClick={() => startEdit(item)} />
+                        <TinyActionButton kind="delete" label="Delete room" onClick={() => deleteRoom(item)} />
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -3304,6 +3887,27 @@ function TimeSlots() {
       setError(err.message);
       setMessage("");
     }
+  }
+
+  async function editItem(item) {
+    const values = await showQinbirDialog({
+      title: "Edit time slot",
+      description: "Choose the day and update the start and end times.",
+      fields: [
+        { name: "day", label: "Day", type: "select", value: item.day || "Monday", options: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day) => ({ value: day, label: day })) },
+        { name: "start_time", label: "Start time", type: "time", value: item.start_time || "08:00" },
+        { name: "end_time", label: "End time", type: "time", value: item.end_time || "10:00" },
+      ],
+    });
+    if (!values) return;
+    try { await apiRequest(`/time-slots/${item.id}`, { method: "PUT", body: JSON.stringify({ day: values.day.trim(), start_time: values.start_time, end_time: values.end_time }) }); setMessage("Time slot updated successfully."); setError(""); await load(); }
+    catch (err) { setError(err.message); }
+  }
+  async function deleteItem(item) {
+    const confirmed = await showQinbirDialog({ type: "confirm", title: "Delete time slot?", message: `Delete ${item.day} ${item.start_time}–${item.end_time}? This action cannot be undone.` });
+    if (!confirmed) return;
+    try { await apiRequest(`/time-slots/${item.id}`, { method: "DELETE" }); setMessage("Time slot deleted successfully."); setError(""); await load(); }
+    catch (err) { setError(err.message); }
   }
 
   return (
@@ -3370,13 +3974,14 @@ function TimeSlots() {
         </form>
 
         <div className="qinbir-table-wrap" style={styles.tableWrap}>
-          <table className="qinbir-table" style={styles.table}>
+          <table className="qinbir-table qinbir-management-table" style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>ID</th>
                 <th style={styles.th}>Day</th>
                 <th style={styles.th}>Start</th>
                 <th style={styles.th}>End</th>
+                <th style={styles.th}>Actions</th>
               </tr>
             </thead>
 
@@ -3387,6 +3992,10 @@ function TimeSlots() {
                   <td style={styles.td}>{item.day}</td>
                   <td style={styles.td}>{item.start_time}</td>
                   <td style={styles.td}>{item.end_time}</td>
+                  <td style={styles.td}>
+                    <TinyActionButton kind="edit" label="Edit time slot" onClick={() => editItem(item)} />
+                    <TinyActionButton kind="delete" label="Delete time slot" onClick={() => deleteItem(item)} />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -3455,6 +4064,27 @@ function LecturerAvailability() {
       setError(err.message);
       setMessage("");
     }
+  }
+
+  async function editItem(item) {
+    const values = await showQinbirDialog({
+      title: "Edit lecturer availability",
+      description: "Update the lecturer, time slot, and availability status.",
+      fields: [
+        { name: "lecturer_id", label: "Lecturer ID", type: "number", min: 1, value: item.lecturer_id },
+        { name: "time_slot_id", label: "Time slot ID", type: "number", min: 1, value: item.time_slot_id },
+        { name: "is_available", label: "Availability", type: "select", value: String(Boolean(item.is_available)), options: [{ value: "true", label: "Available" }, { value: "false", label: "Unavailable" }] },
+      ],
+    });
+    if (!values) return;
+    try { await apiRequest(`/lecturer-availability/${item.id}`, { method: "PUT", body: JSON.stringify({ lecturer_id: Number(values.lecturer_id), time_slot_id: Number(values.time_slot_id), is_available: values.is_available === "true" }) }); setMessage("Availability updated successfully."); setError(""); await load(); }
+    catch (err) { setError(err.message); }
+  }
+  async function deleteItem(item) {
+    const confirmed = await showQinbirDialog({ type: "confirm", title: "Delete availability record?", message: "Delete this lecturer availability record? This action cannot be undone." });
+    if (!confirmed) return;
+    try { await apiRequest(`/lecturer-availability/${item.id}`, { method: "DELETE" }); setMessage("Availability record deleted successfully."); setError(""); await load(); }
+    catch (err) { setError(err.message); }
   }
 
   return (
@@ -3541,13 +4171,14 @@ function LecturerAvailability() {
         </form>
 
         <div className="qinbir-table-wrap" style={styles.tableWrap}>
-          <table className="qinbir-table" style={styles.table}>
+          <table className="qinbir-table qinbir-management-table" style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>ID</th>
                 <th style={styles.th}>Lecturer</th>
                 <th style={styles.th}>Time Slot</th>
                 <th style={styles.th}>Status</th>
+                <th style={styles.th}>Actions</th>
               </tr>
             </thead>
 
@@ -3579,6 +4210,10 @@ function LecturerAvailability() {
                         ? "Available"
                         : "Unavailable"}
                     </span>
+                  </td>
+                  <td style={styles.td}>
+                    <TinyActionButton kind="edit" label="Edit availability" onClick={() => editItem(item)} />
+                    <TinyActionButton kind="delete" label="Delete availability" onClick={() => deleteItem(item)} />
                   </td>
                 </tr>
               ))}
@@ -3661,6 +4296,30 @@ function CourseRequirements() {
       setError(err.message);
       setMessage("");
     }
+  }
+
+  async function editItem(item) {
+    const values = await showQinbirDialog({
+      title: "Edit course requirement",
+      description: "Update the course, section, lecturer, and weekly session details.",
+      fields: [
+        { name: "course_id", label: "Course ID", type: "number", min: 1, value: item.course_id },
+        { name: "student_section_id", label: "Student section ID", type: "number", min: 1, value: item.student_section_id },
+        { name: "lecturer_id", label: "Lecturer ID", type: "number", min: 1, value: item.lecturer_id },
+        { name: "sessions_per_week", label: "Sessions per week", type: "number", min: 1, value: item.sessions_per_week },
+        { name: "long_session_hours", label: "Long session hours", type: "number", min: 1, value: item.long_session_hours },
+        { name: "short_session_hours", label: "Short session hours", type: "number", min: 1, value: item.short_session_hours },
+      ],
+    });
+    if (!values) return;
+    try { await apiRequest(`/course-requirements/${item.id}`, { method: "PUT", body: JSON.stringify({ course_id: Number(values.course_id), student_section_id: Number(values.student_section_id), lecturer_id: Number(values.lecturer_id), sessions_per_week: Number(values.sessions_per_week), long_session_hours: Number(values.long_session_hours), short_session_hours: Number(values.short_session_hours) }) }); setMessage("Course requirement updated successfully."); setError(""); await load(); }
+    catch (err) { setError(err.message); }
+  }
+  async function deleteItem(item) {
+    const confirmed = await showQinbirDialog({ type: "confirm", title: "Delete course requirement?", message: "Delete this course requirement? This action cannot be undone." });
+    if (!confirmed) return;
+    try { await apiRequest(`/course-requirements/${item.id}`, { method: "DELETE" }); setMessage("Course requirement deleted successfully."); setError(""); await load(); }
+    catch (err) { setError(err.message); }
   }
 
   return (
@@ -3789,7 +4448,7 @@ function CourseRequirements() {
         </form>
 
         <div className="qinbir-table-wrap" style={styles.tableWrap}>
-          <table className="qinbir-table" style={styles.table}>
+          <table className="qinbir-table qinbir-management-table" style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>ID</th>
@@ -3799,6 +4458,7 @@ function CourseRequirements() {
                 <th style={styles.th}>Sessions</th>
                 <th style={styles.th}>Long</th>
                 <th style={styles.th}>Short</th>
+                <th style={styles.th}>Actions</th>
               </tr>
             </thead>
 
@@ -3824,8 +4484,10 @@ function CourseRequirements() {
                   <td style={styles.td}>
                     {item.long_session_hours}h
                   </td>
+                  <td style={styles.td}>{item.short_session_hours}h</td>
                   <td style={styles.td}>
-                    {item.short_session_hours}h
+                    <TinyActionButton kind="edit" label="Edit course requirement" onClick={() => editItem(item)} />
+                    <TinyActionButton kind="delete" label="Delete course requirement" onClick={() => deleteItem(item)} />
                   </td>
                 </tr>
               ))}
@@ -3894,6 +4556,29 @@ function Constraints() {
       setError(err.message);
       setMessage("");
     }
+  }
+
+  async function editItem(item) {
+    const values = await showQinbirDialog({
+      title: "Edit constraint",
+      description: "Update the rule settings used by the scheduling engine.",
+      fields: [
+        { name: "name", label: "Constraint name", value: item.name || "" },
+        { name: "type", label: "Constraint type", type: "select", value: item.type || "HARD", options: [{ value: "HARD", label: "Hard constraint" }, { value: "SOFT", label: "Soft constraint" }] },
+        { name: "weight", label: "Weight", type: "number", min: 0, step: "any", value: item.weight ?? 1 },
+        { name: "is_active", label: "Status", type: "select", value: String(Boolean(item.is_active)), options: [{ value: "true", label: "Active" }, { value: "false", label: "Inactive" }] },
+        { name: "description", label: "Description", type: "textarea", value: item.description || "", required: false, fullWidth: true },
+      ],
+    });
+    if (!values) return;
+    try { await apiRequest(`/constraints/${item.id}`, { method: "PUT", body: JSON.stringify({ name: values.name.trim(), type: values.type, weight: Number(values.weight), is_active: values.is_active === "true", description: values.description.trim() }) }); setMessage("Constraint updated successfully."); setError(""); await load(); }
+    catch (err) { setError(err.message); }
+  }
+  async function deleteItem(item) {
+    const confirmed = await showQinbirDialog({ type: "confirm", title: "Delete constraint?", message: `Delete constraint "${item.name}"? This action cannot be undone.` });
+    if (!confirmed) return;
+    try { await apiRequest(`/constraints/${item.id}`, { method: "DELETE" }); setMessage("Constraint deleted successfully."); setError(""); await load(); }
+    catch (err) { setError(err.message); }
   }
 
   return (
@@ -3988,7 +4673,7 @@ function Constraints() {
         </form>
 
         <div className="qinbir-table-wrap" style={styles.tableWrap}>
-          <table className="qinbir-table" style={styles.table}>
+          <table className="qinbir-table qinbir-management-table" style={styles.table}>
             <thead>
               <tr>
                 <th style={styles.th}>ID</th>
@@ -3997,6 +4682,7 @@ function Constraints() {
                 <th style={styles.th}>Weight</th>
                 <th style={styles.th}>Active</th>
                 <th style={styles.th}>Description</th>
+                <th style={styles.th}>Actions</th>
               </tr>
             </thead>
 
@@ -4014,8 +4700,12 @@ function Constraints() {
                   <td style={styles.td}>
                     {item.is_active ? "Yes" : "No"}
                   </td>
-                  <td style={styles.td}>
+                  <td style={{ ...styles.td, maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis" }}>
                     {item.description || "—"}
+                  </td>
+                  <td style={styles.td}>
+                    <TinyActionButton kind="edit" label="Edit constraint" onClick={() => editItem(item)} />
+                    <TinyActionButton kind="delete" label="Delete constraint" onClick={() => deleteItem(item)} />
                   </td>
                 </tr>
               ))}
@@ -4750,6 +5440,7 @@ function Timetable() {
 function App() {
   return (
     <BrowserRouter>
+      <QinbirDialogHost />
       <Layout>
         <Routes>
           <Route path="/" element={<Dashboard />} />
