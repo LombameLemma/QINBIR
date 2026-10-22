@@ -400,3 +400,39 @@ def remove_course_from_program(
         "course_id": course_id,
         "program_id": program_id
     }
+
+# =========================================================
+# DELETE COURSE
+# =========================================================
+
+@router.delete("/{course_id}")
+def delete_course(
+    course_id: int,
+    db: Session = Depends(get_db)
+):
+    # Find the course
+    course = (
+        db.query(Course)
+        .filter(Course.id == course_id)
+        .first()
+    )
+
+    if not course:
+        raise HTTPException(
+            status_code=404,
+            detail="Course not found"
+        )
+
+    # Remove course-program relationships first
+    db.query(ProgramCourse).filter(
+        ProgramCourse.course_id == course_id
+    ).delete(synchronize_session=False)
+
+    # Delete the course
+    db.delete(course)
+    db.commit()
+
+    return {
+        "message": "Course deleted successfully",
+        "course_id": course_id
+    }
