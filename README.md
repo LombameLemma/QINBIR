@@ -2,6 +2,7 @@
 # ቅንብር — QINBIR
 
 
+
 Smart University Timetable Scheduling System.
 
 QINBIR is a university scheduling platform designed to generate valid
