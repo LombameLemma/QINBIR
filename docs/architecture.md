@@ -2,6 +2,7 @@
 
 QINBIR consists of three main application components:
 
+
 1. React frontend
 2. FastAPI backend
 3. Python scheduling engine
