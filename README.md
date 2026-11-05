@@ -88,3 +88,9 @@ QINBIR/
 ├── tests/
 ├── docker-compose.yml
 └── README.md
+
+## 📄 Project Documentation
+
+Explore the QINBIR project documentation for an overview of its architecture, technologies, database design, scheduling process, API endpoints, and deployment.
+
+[**View QINBIR Project Documentation (PDF)**](docs/QINBIR_Project_Documentation.pdf)
