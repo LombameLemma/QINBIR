@@ -1,13 +1,13 @@
-from fastapi import FastAPI
+
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
+from app.security import require_role
 
 # ============================================================
 # IMPORT ALL MODELS
 # ============================================================
-# Importing the models ensures SQLAlchemy knows about all
-# database tables before create_all() is called.
 
 from app.models.user import User
 from app.models.department import Department
@@ -25,17 +25,17 @@ from app.models.schedule import Schedule
 from app.models.schedule_entry import ScheduleEntry
 from app.models.constraint import Constraint
 
-
 # ============================================================
 # IMPORT ROUTES
 # ============================================================
 
 from app.routes import (
+    auth,
     departments,
     programs,
     courses,
     lecturers,
-    users,
+    students,
     student_sections,
     rooms,
     time_slots,
@@ -44,8 +44,9 @@ from app.routes import (
     schedules,
     schedule_entries,
     constraints,
+    timetable,
+    
 )
-
 
 # ============================================================
 # FASTAPI APPLICATION
@@ -57,14 +58,9 @@ app = FastAPI(
     version="1.0.0",
 )
 
-
 # ============================================================
 # CORS CONFIGURATION
 # ============================================================
-
-# Local development URLs
-# Production Vercel URL will be added when the final
-# Vercel domain is confirmed.
 
 app.add_middleware(
     CORSMiddleware,
@@ -78,25 +74,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # ============================================================
 # API ROUTES
 # ============================================================
 
-app.include_router(departments.router)
-app.include_router(programs.router)
-app.include_router(courses.router)
-app.include_router(lecturers.router)
-app.include_router(users.router)
-app.include_router(student_sections.router)
-app.include_router(rooms.router)
-app.include_router(time_slots.router)
-app.include_router(course_requirements.router)
-app.include_router(lecturer_availability.router)
-app.include_router(schedules.router)
-app.include_router(schedule_entries.router)
-app.include_router(constraints.router)
+# Authentication remains available without Admin authorization.
+app.include_router(auth.router)
 
+# All existing management APIs require an authenticated Admin.
+admin_only = [Depends(require_role("ADMIN"))]
+
+app.include_router(departments.router, dependencies=admin_only)
+app.include_router(programs.router, dependencies=admin_only)
+app.include_router(courses.router, dependencies=admin_only)
+app.include_router(lecturers.router, dependencies=admin_only)
+app.include_router(students.router)
+app.include_router(student_sections.router, dependencies=admin_only)
+app.include_router(rooms.router, dependencies=admin_only)
+app.include_router(time_slots.router, dependencies=admin_only)
+app.include_router(course_requirements.router, dependencies=admin_only)
+app.include_router(lecturer_availability.router, dependencies=admin_only)
+app.include_router(schedules.router, dependencies=admin_only)
+app.include_router(schedule_entries.router, dependencies=admin_only)
+app.include_router(constraints.router, dependencies=admin_only)
+app.include_router(timetable.router)
 
 # ============================================================
 # ROOT ENDPOINT
@@ -107,7 +108,6 @@ def root():
     return {
         "message": "QINBIR API is running"
     }
-
 
 # ============================================================
 # HEALTH CHECK

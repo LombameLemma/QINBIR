@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+﻿from sqlalchemy import Column, Integer, String, ForeignKey
 
 from app.database import Base
 
@@ -25,4 +25,10 @@ class Student(Base):
         Integer,
         ForeignKey("programs.id"),
         nullable=False
+    )
+
+    section_id = Column(
+        Integer,
+        ForeignKey("student_sections.id"),
+        nullable=True
     )

@@ -5,8 +5,9 @@ import {
   Route,
   NavLink,
   Link,
+  Navigate,
+  useNavigate,
 } from "react-router-dom";
-
 /* ============================================================
    API
 ============================================================ */
@@ -15,12 +16,17 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
 async function apiRequest(endpoint, options = {}) {
+  const token = localStorage.getItem("qinbir_access_token");
+
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {}),
+  };
+
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
     ...options,
+    headers,
   });
 
   const contentType = response.headers.get("content-type");
@@ -1316,7 +1322,15 @@ function Sidebar({ isOpen, onClose }) {
    TOP BAR
 ============================================================ */
 
-function TopBar({ onMenuClick }) {
+
+function TopBar({ onMenuClick, user, onLogout }) {
+  const role = (user?.role || "").toUpperCase();
+
+  const accountLabel =
+    role === "ADMIN"
+      ? "Admin"
+      : `${role.charAt(0) + role.slice(1).toLowerCase()} — ${user?.full_name || "User"}`;
+
   return (
     <header className="qinbir-topbar" style={styles.topbar}>
       <div className="qinbir-topbar-left">
@@ -1330,7 +1344,9 @@ function TopBar({ onMenuClick }) {
         </button>
 
         <div>
-          <div className="qinbir-topbar-title" style={styles.topbarTitle}>QINBIR Smart Scheduler</div>
+          <div className="qinbir-topbar-title" style={styles.topbarTitle}>
+            QINBIR Smart Scheduler
+          </div>
           <div className="qinbir-topbar-sub" style={styles.topbarSub}>
             University Academic Scheduling Platform
           </div>
@@ -1342,27 +1358,39 @@ function TopBar({ onMenuClick }) {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "10px",
+          gap: "12px",
+          flexWrap: "wrap",
         }}
       >
-        <span className="qinbir-badge" style={styles.badge}>● System Online</span>
+        <span className="qinbir-badge" style={styles.badge}>
+          ● System Online
+        </span>
 
-        <div
-          className="qinbir-topbar-avatar"
+        <span
           style={{
-            width: "35px",
-            height: "35px",
-            borderRadius: "50%",
-            background: "#e9eefc",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 800,
-            color: "#3156d3",
+            fontWeight: 700,
+            color: "#26344d",
+            fontSize: "13px",
           }}
         >
-          Q
-        </div>
+          {accountLabel}
+        </span>
+
+        <button
+          type="button"
+          onClick={onLogout}
+          style={{
+            padding: "8px 12px",
+            border: "1px solid #e0e5ef",
+            borderRadius: "8px",
+            background: "#ffffff",
+            color: "#d14343",
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          Log out
+        </button>
       </div>
     </header>
   );
@@ -1372,7 +1400,7 @@ function TopBar({ onMenuClick }) {
    LAYOUT
 ============================================================ */
 
-function Layout({ children }) {
+function Layout({ children, user, onLogout, showSidebar = true }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -1380,13 +1408,19 @@ function Layout({ children }) {
       <style>{responsiveStyles}</style>
 
       <div className="qinbir-layout" style={styles.layout}>
-        <Sidebar
-          isOpen={menuOpen}
-          onClose={() => setMenuOpen(false)}
-        />
+                {showSidebar && (
+          <Sidebar
+            isOpen={menuOpen}
+            onClose={() => setMenuOpen(false)}
+          />
+        )}
 
         <main className="qinbir-main" style={styles.main}>
-          <TopBar onMenuClick={() => setMenuOpen(true)} />
+          <TopBar
+            onMenuClick={() => setMenuOpen(true)}
+            user={user}
+            onLogout={onLogout}
+          />
 
           <div
             className="qinbir-content"
@@ -1398,12 +1432,9 @@ function Layout({ children }) {
       </div>
     </>
   );
-}
-
-/* ============================================================
+}/* ============================================================
    DASHBOARD
 ============================================================ */
-
 function Dashboard() {
   const [stats, setStats] = useState({
     departments: 0,
@@ -5436,69 +5467,543 @@ function Timetable() {
 /* ============================================================
    APP
 ============================================================ */
+function LoginPage({ onLogin }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleLogin(e) {
+    e.preventDefault();
+
+    setError("");
+    setLoading(true);
+
+    try {
+      const formData = new URLSearchParams();
+      formData.append("username", email.trim().toLowerCase());
+      formData.append("password", password);
+
+      const response = await fetch(
+        `${API_BASE_URL}/auth/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.detail || "Login failed. Check your credentials."
+        );
+      }
+
+      localStorage.setItem(
+        "qinbir_access_token",
+        data.access_token
+      );
+
+      onLogin(data.user);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#f5f7fb",
+        padding: "20px",
+        fontFamily: styles.app.fontFamily,
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "420px",
+          background: "white",
+          padding: "35px",
+          borderRadius: "14px",
+          boxShadow: "0 8px 30px rgba(15, 23, 42, 0.08)",
+        }}
+      >
+        <div style={{ textAlign: "center", marginBottom: "28px" }}>
+          <h1
+            style={{
+              color: "#17295c",
+              fontSize: "30px",
+              margin: "0 0 8px",
+            }}
+          >
+            QINBIR
+          </h1>
+
+          <p style={{ color: "#7a8498", margin: 0 }}>
+            Smart University Scheduling
+          </p>
+        </div>
+
+        <h2 style={{ color: "#17233e", marginBottom: "8px" }}>
+          Welcome back
+        </h2>
+
+        <p style={{ color: "#7a8498", fontSize: "14px" }}>
+          Sign in to access your QINBIR account.
+        </p>
+
+        {error && (
+          <div
+            style={{
+              ...styles.error,
+              marginBottom: "18px",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleLogin}>
+          <div style={{ marginBottom: "18px" }}>
+            <FormField label="Email address">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                required
+                autoComplete="username"
+                style={styles.input}
+              />
+            </FormField>
+          </div>
+
+          <div style={{ marginBottom: "22px" }}>
+            <FormField label="Password">
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+           
+                autoComplete="current-password"
+                style={styles.input}
+              />
+            </FormField>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "100%",
+              padding: "13px",
+              border: "none",
+              borderRadius: "8px",
+              background: "#3156d3",
+              color: "white",
+              fontWeight: 700,
+              fontSize: "15px",
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.7 : 1,
+            }}
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function LecturerDashboard({ user }) {
+  const [timetable, setTimetable] = useState([]);
+  const [lecturerName, setLecturerName] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadTimetable() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const data = await apiRequest("/timetable/lecturer/me");
+
+        setTimetable(data.entries || []);
+        setLecturerName(data.lecturer || user.full_name);
+      } catch (err) {
+        setError(err.message || "Could not load your timetable.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadTimetable();
+  }, [user.full_name]);
+
+  const cardStyle = {
+    background: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
+    padding: 20,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+  };
+
+  return (
+    <div style={{ display: "grid", gap: 24 }}>
+      <div>
+        <h2 style={{ margin: 0, color: "#172554" }}>
+          Lecturer Dashboard
+        </h2>
+        <p style={{ color: "#64748b" }}>
+          Welcome, {lecturerName || user.full_name}
+        </p>
+      </div>
+
+      <div style={cardStyle}>
+        <h3 style={{ marginTop: 0 }}>My Teaching Overview</h3>
+        <p>
+          Published timetable entries: <strong>{timetable.length}</strong>
+        </p>
+        <p>
+          Assigned courses:{" "}
+          <strong>
+            {new Set(timetable.map((item) => item.course)).size}
+          </strong>
+        </p>
+      </div>
+
+      <div style={cardStyle}>
+        <h3 style={{ marginTop: 0 }}>My Weekly Timetable</h3>
+
+        {loading && <p>Loading your timetable...</p>}
+
+        {error && (
+          <p style={{ color: "#dc2626" }}>{error}</p>
+        )}
+
+        {!loading && !error && timetable.length === 0 && (
+          <p style={{ color: "#64748b" }}>
+            No published timetable entries are available yet.
+          </p>
+        )}
+
+        {!loading && !error && timetable.length > 0 && (
+          <div style={{ overflowX: "auto" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                minWidth: 650,
+              }}
+            >
+              <thead>
+                <tr style={{ background: "#f1f5f9" }}>
+                  {[
+                    "Day",
+                    "Time",
+                    "Course",
+                    "Student Section",
+                    "Room",
+                  ].map((heading) => (
+                    <th
+                      key={heading}
+                      style={{
+                        padding: 12,
+                        textAlign: "left",
+                        borderBottom: "1px solid #e2e8f0",
+                      }}
+                    >
+                      {heading}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {timetable.map((item) => (
+                  <tr key={item.id}>
+                    <td style={{ padding: 12 }}>{item.day}</td>
+                    <td style={{ padding: 12 }}>
+                      {item.start_time} – {item.end_time}
+                    </td>
+                    <td style={{ padding: 12 }}>{item.course}</td>
+                    <td style={{ padding: 12 }}>
+                      {item.student_section}
+                    </td>
+                    <td style={{ padding: 12 }}>{item.room}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StudentDashboard({ user }) {
+  const [timetable, setTimetable] = useState([]);
+  const [studentSection, setStudentSection] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function loadTimetable() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const data = await apiRequest("/timetable/student/me");
+
+        setTimetable(data.entries || []);
+        setStudentSection(data.student_section || "");
+      } catch (err) {
+        setError(err.message || "Could not load your timetable.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadTimetable();
+  }, []);
+
+  const cardStyle = {
+    background: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
+    padding: 20,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+  };
+
+  return (
+    <div style={{ display: "grid", gap: 24 }}>
+      <div>
+        <h2 style={{ margin: 0, color: "#172554" }}>
+          Student Dashboard
+        </h2>
+        <p style={{ color: "#64748b" }}>
+          Welcome, {user.full_name}
+        </p>
+      </div>
+
+      <div style={cardStyle}>
+        <h3 style={{ marginTop: 0 }}>My Academic Overview</h3>
+        <p>
+          Student Section: <strong>{studentSection || "Not assigned"}</strong>
+        </p>
+        <p>
+          Published Classes: <strong>{timetable.length}</strong>
+        </p>
+        <p>
+          Courses:{" "}
+          <strong>
+            {new Set(timetable.map((item) => item.course)).size}
+          </strong>
+        </p>
+      </div>
+
+      <div style={cardStyle}>
+        <h3 style={{ marginTop: 0 }}>My Weekly Timetable</h3>
+
+        {loading && <p>Loading your timetable...</p>}
+
+        {error && <p style={{ color: "#dc2626" }}>{error}</p>}
+
+        {!loading && !error && timetable.length === 0 && (
+          <p style={{ color: "#64748b" }}>
+            No published timetable is available for your section yet.
+          </p>
+        )}
+
+        {!loading && !error && timetable.length > 0 && (
+          <div style={{ overflowX: "auto" }}>
+            <table
+              style={{
+                width: "100%",
+                minWidth: 650,
+                borderCollapse: "collapse",
+              }}
+            >
+              <thead>
+                <tr style={{ background: "#f1f5f9" }}>
+                  {["Day", "Time", "Course", "Lecturer", "Room"].map(
+                    (heading) => (
+                      <th
+                        key={heading}
+                        style={{
+                          padding: 12,
+                          textAlign: "left",
+                          borderBottom: "1px solid #e2e8f0",
+                        }}
+                      >
+                        {heading}
+                      </th>
+                    )
+                  )}
+                </tr>
+              </thead>
+
+              <tbody>
+                {timetable.map((item) => (
+                  <tr key={item.id}>
+                    <td style={{ padding: 12 }}>{item.day}</td>
+                    <td style={{ padding: 12 }}>
+                      {item.start_time} – {item.end_time}
+                    </td>
+                    <td style={{ padding: 12 }}>{item.course}</td>
+                    <td style={{ padding: 12 }}>{item.lecturer}</td>
+                    <td style={{ padding: 12 }}>{item.room}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AppContent() {
+  const [user, setUser] = useState(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    async function checkLogin() {
+      const token = localStorage.getItem("qinbir_access_token");
+
+      if (!token) {
+        setCheckingAuth(false);
+        return;
+      }
+
+      try {
+        const account = await apiRequest("/auth/me");
+        setUser(account);
+      } catch (error) {
+        localStorage.removeItem("qinbir_access_token");
+        setUser(null);
+      } finally {
+        setCheckingAuth(false);
+      }
+    }
+
+    checkLogin();
+  }, []);
+
+  function handleLogin(account) {
+    setUser(account);
+    navigate("/");
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("qinbir_access_token");
+    setUser(null);
+    navigate("/login");
+  }
+
+  if (checkingAuth) {
+    return <div style={{ padding: 40 }}>Checking your account...</div>;
+  }
+
+  if (!user) {
+    return (
+      <Routes>
+        <Route
+          path="/login"
+          element={<LoginPage onLogin={handleLogin} />}
+        />
+        <Route
+          path="*"
+          element={<Navigate to="/login" replace />}
+        />
+      </Routes>
+    );
+  }
+
+  
+if (user.role === "LECTURER") {
+  return (
+    <Layout
+      user={user}
+      onLogout={handleLogout}
+      showSidebar={false}
+    >
+      <LecturerDashboard user={user} />
+    </Layout>
+  );
+}
+
+if (user.role === "STUDENT") {
+  return (
+    <Layout
+      user={user}
+      onLogout={handleLogout}
+      showSidebar={false}
+    >
+      <StudentDashboard user={user} />
+    </Layout>
+  );
+}
+
+if (user.role !== "ADMIN") {
+  return (
+    <div style={{ padding: 40 }}>
+      <h2>Access restricted</h2>
+      <p>Your account role is not supported.</p>
+      <button onClick={handleLogout}>Log out</button>
+    </div>
+  );
+}
+
+
+  return (
+    <Layout user={user} onLogout={handleLogout}>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/departments" element={<Departments />} />
+        <Route path="/programs" element={<Programs />} />
+        <Route path="/courses" element={<Courses />} />
+        <Route path="/lecturers" element={<Lecturers />} />
+        <Route path="/student-sections" element={<StudentSections />} />
+        <Route path="/rooms" element={<Rooms />} />
+        <Route path="/time-slots" element={<TimeSlots />} />
+        <Route path="/lecturer-availability" element={<LecturerAvailability />} />
+        <Route path="/course-requirements" element={<CourseRequirements />} />
+        <Route path="/constraints" element={<Constraints />} />
+        <Route path="/generate-schedule" element={<GenerateSchedule />} />
+        <Route path="/timetable" element={<Timetable />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Layout>
+  );
+}
+
 
 function App() {
   return (
     <BrowserRouter>
       <QinbirDialogHost />
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-
-          <Route
-            path="/departments"
-            element={<Departments />}
-          />
-
-          <Route path="/programs" element={<Programs />} />
-
-          <Route path="/courses" element={<Courses />} />
-
-          <Route
-            path="/lecturers"
-            element={<Lecturers />}
-          />
-
-          <Route
-            path="/student-sections"
-            element={<StudentSections />}
-          />
-
-          <Route path="/rooms" element={<Rooms />} />
-
-          <Route
-            path="/time-slots"
-            element={<TimeSlots />}
-          />
-
-          <Route
-            path="/lecturer-availability"
-            element={<LecturerAvailability />}
-          />
-
-          <Route
-            path="/course-requirements"
-            element={<CourseRequirements />}
-          />
-
-          <Route
-            path="/constraints"
-            element={<Constraints />}
-          />
-
-          <Route
-            path="/generate-schedule"
-            element={<GenerateSchedule />}
-          />
-
-          <Route
-            path="/timetable"
-            element={<Timetable />}
-          />
-        </Routes>
-      </Layout>
+      <AppContent />
     </BrowserRouter>
   );
 }
+
+
 
 export default App;

@@ -304,3 +304,66 @@ def generate_schedule(
             status_code=500,
             detail=str(e)
         )
+from datetime import datetime
+from app.security import require_role
+
+
+@router.post("/{schedule_id}/publish")
+def publish_schedule(
+    schedule_id: int,
+    current_user=Depends(require_role("ADMIN")),
+    db: Session = Depends(get_db),
+):
+    schedule = (
+        db.query(Schedule)
+        .filter(Schedule.id == schedule_id)
+        .first()
+    )
+
+    if schedule is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Schedule not found.",
+        )
+
+    if schedule.status != "DRAFT":
+        raise HTTPException(
+            status_code=409,
+            detail="Only draft schedules can be published.",
+        )
+
+    entries_count = (
+        db.query(ScheduleEntry)
+        .filter(ScheduleEntry.schedule_id == schedule.id)
+        .count()
+    )
+
+    if entries_count == 0:
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot publish a schedule with no entries.",
+        )
+
+    now = datetime.utcnow()
+    schedule.status = "PUBLISHED"
+    schedule.approved_at = now
+    schedule.published_at = now
+
+    try:
+        db.commit()
+        db.refresh(schedule)
+    except Exception:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Publishing failed. Changes were rolled back.",
+        )
+
+    return {
+        "message": "Schedule published successfully.",
+        "schedule_id": schedule.id,
+        "name": schedule.name,
+        "status": schedule.status,
+        "published_at": schedule.published_at,
+        "entries_count": entries_count,
+    }
