@@ -14,6 +14,6 @@ The local database is:
 
 qinbir.db
 
-## Development Architecture4
+## Development Architecture
 
 React → FastAPI → SQLAlchemy → SQLite
