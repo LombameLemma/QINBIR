@@ -95,3 +95,24 @@ Explore the QINBIR project documentation for an overview of its architecture, te
 
 [**View QINBIR Project Documentation (PDF)**](docs/QINBIR_Project_Documentation.pdf)
 [**View QINBIR Project Presentation (PowerPoint)**](docs/QINBIR.pptx)
+## 🔐 Demo Login Credentials
+
+The following accounts are available for testing QINBIR.
+
+| Role | Username / Email | Password |
+|---|---|---|
+| Administrator | admin@gmail.com | Admin12345! |
+| Lecturer 1 | lecturer1@qinbir.edu.et | Shared privately |
+| Lecturer 48 | lecturer48@qinbir.edu.et | abc1234abc1234|
+| Lecturer 49 | lecturer49@qinbir.edu.et | abc12345abc12345 |
+| Lecturer 50 | lecturer50@qinbir.edu.et | abc123456abc123456 |
+| Student | studenttest1@qinbir.edu.et | student123456 |
+
+### User Roles
+
+- **Administrator:** Manages university resources and generates and publishes schedules.
+- **Lecturer:** Views personal teaching timetables.
+- **Student:** Views personal academic timetables.
+
+For demo access, contact the project administrator to obtain the passwords.
+deployed link:"https://qinbir.vercel.app/"
